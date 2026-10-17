@@ -1,0 +1,18 @@
+{
+  "feature": "my-feature",
+  "commit_sha": "0000000000000000000000000000000000000000",
+  "entries": [
+    {
+      "command_type": "test",
+      "command": "pytest tests/test_invalid_evidence_fixture.py::test_something",
+      "result": "1 passed",
+      "test_count": 1
+    },
+    {
+      "command_type": "lint",
+      "command": "git diff --check",
+      "result": "no output",
+      "test_count": null
+    }
+  ]
+}

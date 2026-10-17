@@ -1,0 +1,18 @@
+{
+  "feature": "my-feature",
+  "commit_sha": "f43630a7a7a47c5bedd06595129740fa164aa126",
+  "entries": [
+    {
+      "command_type": "test",
+      "command": "pytest tests/test_invalid_snapshot_fixture.py::test_something",
+      "result": "1 passed",
+      "test_count": 1
+    },
+    {
+      "command_type": "lint",
+      "command": "git diff --check",
+      "result": "no output",
+      "test_count": null
+    }
+  ]
+}

@@ -7,7 +7,7 @@
       "issue_ac": "99-AC1",
       "spec_ac": "SAC-1",
       "task": "T1",
-      "test": "tests/test_my_feature.py::test_something",
+      "test": "tests/test_valid_active_fixture.py::test_something",
       "status": "in-scope"
     }
   ]

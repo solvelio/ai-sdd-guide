@@ -1,0 +1,13 @@
+{
+  "issue": 99,
+  "url": "https://github.com/owner/repo/issues/99",
+  "fetched_at": "2026-06-26T13:50:53Z",
+  "raw_body": "## 受入条件\n\n- [ ] something works\n",
+  "body_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+  "stable_acs": [
+    {
+      "id": "99-AC1",
+      "text": "something works"
+    }
+  ]
+}

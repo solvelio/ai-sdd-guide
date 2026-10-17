@@ -1,10 +1,10 @@
 {
   "feature": "my-feature",
-  "commit_sha": "ea0f619d3416cbffa573357478124adb2eec446f",
+  "commit_sha": "f43630a7a7a47c5bedd06595129740fa164aa126",
   "entries": [
     {
       "command_type": "test",
-      "command": "pytest tests/test_my_feature.py::test_something",
+      "command": "pytest tests/test_valid_active_fixture.py::test_something",
       "result": "1 passed",
       "test_count": 1
     },

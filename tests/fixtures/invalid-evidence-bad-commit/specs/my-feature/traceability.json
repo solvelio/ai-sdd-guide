@@ -1,0 +1,14 @@
+{
+  "issue": 99,
+  "issue_url": "https://github.com/owner/repo/issues/99",
+  "feature": "my-feature",
+  "entries": [
+    {
+      "issue_ac": "99-AC1",
+      "spec_ac": "SAC-1",
+      "task": "T1",
+      "test": "tests/test_invalid_evidence_fixture.py::test_something",
+      "status": "in-scope"
+    }
+  ]
+}
