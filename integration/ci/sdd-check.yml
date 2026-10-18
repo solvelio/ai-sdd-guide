@@ -1,5 +1,6 @@
 # SDD enforcement — the authoritative, non-bypassable gate (all agents).
 # Copy to .github/workflows/ and replace the test command for this project.
+# Assumes this guide is a submodule at vendor/ai-sdd-guide.
 name: SDD Check
 on:
   pull_request:
@@ -11,6 +12,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          submodules: true
 
       - name: State reset gate
         run: |
@@ -60,7 +62,7 @@ jobs:
             echo "No .sdd/state.json — sdd-validate skipped."
             exit 0
           fi
-          bash integration/ci/sdd-validate.sh --root .
+          bash vendor/ai-sdd-guide/integration/ci/sdd-validate.sh --root .
 
       - name: Tests
         run: |

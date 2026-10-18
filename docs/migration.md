@@ -129,7 +129,7 @@ verify フェーズで `specs/<feature>/evidence.json` を作成する。
 validator で確認する:
 
 ```bash
-bash integration/ci/sdd-validate.sh --root .
+bash vendor/ai-sdd-guide/integration/ci/sdd-validate.sh --root .
 ```
 
 ---
@@ -205,7 +205,7 @@ bash integration/ci/sdd-issue-snapshot.sh --issue 150 --feature auth-refresh --r
 #    specs/auth-refresh/traceability.json に 150-AC1 〜 150-ACn を漏れなく記載
 
 # 4. sdd-validate で確認してから freeze
-bash integration/ci/sdd-validate.sh --root .
+bash vendor/ai-sdd-guide/integration/ci/sdd-validate.sh --root .
 # exit 0 を確認してから state.json を phase=implement に変更
 
 # 5. 実装後 verify フェーズで evidence.json を作成
@@ -228,7 +228,7 @@ bash integration/ci/sdd-issue-snapshot.sh --issue 99 --feature my-feature --root
 #    元 Issue と frozen spec の差分を明示すること
 
 # 4. sdd-validate で確認
-bash integration/ci/sdd-validate.sh --root .
+bash vendor/ai-sdd-guide/integration/ci/sdd-validate.sh --root .
 ```
 
 **完了済み spec（PR merge 済み）は変更しない。** 遡及変更が必要な場合は新 issue を起票する。

@@ -40,5 +40,12 @@
     "status": "completed",
     "handoff": "specs/migration-guide/handoff.md",
     "blocked_reason": null
+  },
+  {
+    "id": "sdd-check-submodule",
+    "phase": "verify",
+    "status": "completed",
+    "handoff": null,
+    "blocked_reason": null
   }
 ]

@@ -98,7 +98,7 @@ bash vendor/ai-sdd-guide/integration/issue-tracker/labels.sh
 
 ## 導入手順（取り込み側プロジェクト）
 ```bash
-# 1. submodule として追加（配置パスは任意。例: vendor/ai-sdd-guide）
+# 1. submodule として追加（配置パスは vendor/ai-sdd-guide 固定。sdd-check.yml がこのパスを前提にする）
 git submodule add <this-repo-url> vendor/ai-sdd-guide
 
 # 2. ルートに薄い入口を配置（一度だけコピー）
