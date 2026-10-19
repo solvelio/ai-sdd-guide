@@ -149,6 +149,13 @@ bash vendor/ai-sdd-guide/integration/ci/sdd-validate.sh --root .
 2. **Spec gate** — ソース変更がある PR に `specs/<feature>/spec.md` が存在することを確認
 3. **Run sdd-validate** — `sdd-validate.sh --root .` を実行してすべての validator チェックを通過させる
 
+guide を private な fork や社内ミラーとして submodule にしている場合、デフォルトの `GITHUB_TOKEN` では submodule を取得できない。PAT をリポジトリ secret `SDD_GUIDE_TOKEN` に登録する。`sdd-check.yml` は secret があればそれを使い、なければ `GITHUB_TOKEN` を使うので、yml を編集する必要はない（`update.sh` で上書きされても設定は消えない）。
+
+- checkout はこの token で consumer リポジトリ本体と submodule の両方を取得する。token には **consumer リポジトリと guide の両方** への Contents: read が必要。
+- consumer と guide が同じオーナー（user / org）配下なら fine-grained PAT で両方を選べる。オーナーが異なる場合、fine-grained PAT は 1 つのオーナーにしか効かないため classic PAT（`repo` scope）を使う。
+- GitHub App の installation token は 1 時間で失効するため、secret に固定値として登録することはできない。
+- fork からの PR と Dependabot の PR には repository secret が渡されないため、`GITHUB_TOKEN` にフォールバックして submodule の取得に失敗する。Dependabot には Dependabot secrets 側に同名の secret を登録する。fork からの PR は private な guide では検査できない。
+
 ---
 
 ## 手順 6: hook への sdd-validate 組み込み（#52）
