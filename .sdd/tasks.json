@@ -47,5 +47,12 @@
     "status": "completed",
     "handoff": null,
     "blocked_reason": null
+  },
+  {
+    "id": "private-submodule-token",
+    "phase": "verify",
+    "status": "completed",
+    "handoff": null,
+    "blocked_reason": null
   }
 ]

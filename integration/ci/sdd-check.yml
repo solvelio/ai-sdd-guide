@@ -13,6 +13,9 @@ jobs:
         with:
           fetch-depth: 0
           submodules: true
+          # If the guide submodule is private, add a repo secret SDD_GUIDE_TOKEN that can read both this repo and the guide.
+          token: ${{ secrets.SDD_GUIDE_TOKEN || github.token }}
+          persist-credentials: false
 
       - name: State reset gate
         run: |

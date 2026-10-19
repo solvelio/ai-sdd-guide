@@ -118,6 +118,7 @@ cp vendor/ai-sdd-guide/integration/codex/config.toml.example .codex/config.toml
 # 5. CI を取り込む（テストコマンドはプロジェクトに合わせて差し替え）
 mkdir -p .github/workflows
 cp vendor/ai-sdd-guide/integration/ci/sdd-check.yml .github/workflows/
+#    guide が private な場合は、このリポジトリと guide の両方を読める PAT をリポジトリ secret SDD_GUIDE_TOKEN に登録する（docs/migration.md 手順 5）
 ```
 
 設計フェーズで superpowers を使う場合は、Claude Code のプラグインとして別途導入する（submoduleとは別）：
