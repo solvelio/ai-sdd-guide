@@ -60,5 +60,5 @@ Issue 登録（バグ報告・機能要望）
   停止ルールと同じ。`orchestration/rules/orchestration.md`）。push は PR を作る直前だけ。
 - Tier ラベルは PR にも付ける（hooks / CI が参照。`rules/conventions.md`）。
 
-[#71]: https://github.com/toshikimiyagawa/ai-sdd-guide/issues/71
-[#72]: https://github.com/toshikimiyagawa/ai-sdd-guide/issues/72
+[#71]: https://github.com/solvelio/ai-sdd-guide/issues/71
+[#72]: https://github.com/solvelio/ai-sdd-guide/issues/72
