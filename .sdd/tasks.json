@@ -54,5 +54,13 @@
     "status": "completed",
     "handoff": null,
     "blocked_reason": null
+  },
+  {
+    "id": "73-github-projects-board",
+    "phase": "implement",
+    "assigned_agent": "claude",
+    "status": "pending",
+    "handoff": "specs/73-github-projects-board/handoff.md",
+    "blocked_reason": null
   }
 ]

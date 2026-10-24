@@ -1,0 +1,81 @@
+{
+  "issue": 73,
+  "url": "https://github.com/toshikimiyagawa/ai-sdd-guide/issues/73",
+  "fetched_at": "2026-10-24T11:37:06Z",
+  "raw_body": "## 背景\n\n- GitHub に Projects があるのに、`.sdd/tasks.json` + `kanban.sh` / `kanban-html.sh` / `kanban-pages.yml` で同じ機能を自前で持っていて二重開発になっている。\n- 状態がずれる: 手で JSON を書き換えるので更新を忘れる（#26）、完了時の `phase` の書き方がそろわない、ブランチ上で書き換えるので main から作業中の状態が見えない（Web 表示は一度も見られていない）。\n- `state.json` は並列作業で衝突し（#22）、PR 前のリセット（#28）の結果、main から作った worktree が Tier 0 扱いになり spec なしのソース編集が guard を通ってしまう。\n\n設計: `_dev/specs/2026-10-24-github-projects-board-design.md`（この Issue のブランチに置く）\n\n## 方針\n\n- 状態はブランチ名 `t<Tier>/<Issue番号>-<名前>` と `specs/<Issue番号>-<名前>/` の中のファイルから機械的に割り出す。凍結は `freeze.json`（凍結したファイルのハッシュ）で記録する。\n- ボードはアカウントで 1 枚の GitHub Projects。1 Issue = 1 カード、列はフェーズ（未着手 → brainstorm → spec → plan → tasks → implement → verify → done）。\n- 更新はエージェントが止まるときの `sdd-board.sh sync` と、GitHub Actions（Issue 作成・クローズ、PR の作成・更新・マージ）。push は PR 作成前だけ。\n- 移行期間は設けず一度に切り替える。GitLab / Azure DevOps は #71 / #72 で別途。\n\n## 受入条件\n\n- [ ] `.sdd/state.json`、`.sdd/tasks.json`、その schema・テンプレート、`kanban.sh`、`kanban-html.sh`、`kanban-pages.yml`、CI の orchestration ジョブがなくなり、ルール・ドキュメントに tasks.json の更新・かんばんの表示・state のリセットの手順が残っていない\n- [ ] ブランチ名 `t<Tier>/<Issue番号>-<名前>` から Tier・Issue 番号・feature（`<Issue番号>-<名前>`）を割り出せる。形に合わない名前は「Tier 未分類」になる\n- [ ] 凍結コマンドで `specs/<feature>/freeze.json` が作られ、凍結したファイルのハッシュを記録する。`tasks.md` はチェック欄の状態を除いてハッシュを取る\n- [ ] guard（Claude / Codex）は、`t0/` ならソース編集を許可し、`t1/`・`t2/` なら `freeze.json` があってハッシュが一致するときだけ許可し、それ以外（`main` を含む）は拒否する。ネットワークや GitHub の認証を使わない\n- [ ] 凍結後に spec / plan / tasks（チェック欄以外）/ traceability を書き換えると、guard と validator がそれを検出する\n- [ ] フェーズが設計書の規則どおりに割り出される（Tier 0 は implement、Tier 1 は spec → implement、Tier 2 は brainstorm → spec → plan → tasks → implement → verify、マージで done）\n- [ ] skill-reminder（Claude / Codex）が割り出したフェーズでスキルを促す\n- [ ] validator は対象の feature をブランチ名から決め、ブランチ名の形、`freeze.json` の正しさ、Tier 2 の `issue-snapshot.json` の Issue 番号とディレクトリ名の一致、`freeze.json` があるときの `handoff.md` の存在を検査する\n- [ ] PR の CI は、形に合わないブランチ名を失敗にする。`dependabot/`・`renovate/` は Tier 0 として通し、例外の接頭辞は `.sdd/board.json` で変えられる\n- [ ] Actions は PR にブランチ名から `sdd:tier-N` ラベルを付け、ブランチ名と食い違う `sdd:tier-N` ラベルがあれば CI を失敗にする\n- [ ] `sdd-board.sh sync` は今のブランチの Issue のカードを割り出したフェーズに更新し、カードがなければボードに入れる。ネットワーク・認証・設定がないときは警告して終了コード 0 で終わる\n- [ ] `sdd-board.sh init` はボードと Phase フィールドを作り、開いている Issue をすべて「未着手」で取り込む。取り込みだけを行うサブコマンドがあり、何度実行しても結果が変わらない\n- [ ] Actions のワークフローは、Issue 作成でカードを「未着手」に、Issue が完了で閉じたら done、対応しない・重複で閉じたらアーカイブ、PR の作成・更新でフェーズを割り出し直し、マージで done にする。マージせずに閉じた PR ではカードを変えない。secret `SDD_PROJECT_TOKEN` がなければ警告して成功で終わる\n- [ ] sdd-reviewer の確認項目が、state.json / tasks.json ではなく、ブランチ名・ディレクトリ名・Issue 番号の一致と `freeze.json` の正しさを確かめる\n- [ ] `templates/tasks.md` の「CI green」「sdd-reviewer 合格」がチェック欄ではなくなる\n- [ ] `integration/update.sh` が新しいワークフローを配り、`kanban-pages.yml` を配らない\n- [ ] `docs/migration.md` に移行手順（state.json / tasks.json の削除、`.sdd/board.json`、secret、ワークフロー、作業中ブランチの扱い、ビューの作り方）がある\n- [ ] このリポジトリ自身が新しい仕組みに移行している\n\n## 関連\n\n#18, #19, #22, #26, #28, #64, #66, #71, #72\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n",
+  "body_hash": "bde117f7f4a1f08999146dacf21238cd7c5387d7c52c1e2eda150f77c369903b",
+  "stable_acs": [
+    {
+      "id": "73-AC1",
+      "text": "`.sdd/state.json`、`.sdd/tasks.json`、その schema・テンプレート、`kanban.sh`、`kanban-html.sh`、`kanban-pages.yml`、CI の orchestration ジョブがなくなり、ルール・ドキュメントに tasks.json の更新・かんばんの表示・state のリセットの手順が残っていない"
+    },
+    {
+      "id": "73-AC2",
+      "text": "ブランチ名 `t<Tier>/<Issue番号>-<名前>` から Tier・Issue 番号・feature（`<Issue番号>-<名前>`）を割り出せる。形に合わない名前は「Tier 未分類」になる"
+    },
+    {
+      "id": "73-AC3",
+      "text": "凍結コマンドで `specs/<feature>/freeze.json` が作られ、凍結したファイルのハッシュを記録する。`tasks.md` はチェック欄の状態を除いてハッシュを取る"
+    },
+    {
+      "id": "73-AC4",
+      "text": "guard（Claude / Codex）は、`t0/` ならソース編集を許可し、`t1/`・`t2/` なら `freeze.json` があってハッシュが一致するときだけ許可し、それ以外（`main` を含む）は拒否する。ネットワークや GitHub の認証を使わない"
+    },
+    {
+      "id": "73-AC5",
+      "text": "凍結後に spec / plan / tasks（チェック欄以外）/ traceability を書き換えると、guard と validator がそれを検出する"
+    },
+    {
+      "id": "73-AC6",
+      "text": "フェーズが設計書の規則どおりに割り出される（Tier 0 は implement、Tier 1 は spec → implement、Tier 2 は brainstorm → spec → plan → tasks → implement → verify、マージで done）"
+    },
+    {
+      "id": "73-AC7",
+      "text": "skill-reminder（Claude / Codex）が割り出したフェーズでスキルを促す"
+    },
+    {
+      "id": "73-AC8",
+      "text": "validator は対象の feature をブランチ名から決め、ブランチ名の形、`freeze.json` の正しさ、Tier 2 の `issue-snapshot.json` の Issue 番号とディレクトリ名の一致、`freeze.json` があるときの `handoff.md` の存在を検査する"
+    },
+    {
+      "id": "73-AC9",
+      "text": "PR の CI は、形に合わないブランチ名を失敗にする。`dependabot/`・`renovate/` は Tier 0 として通し、例外の接頭辞は `.sdd/board.json` で変えられる"
+    },
+    {
+      "id": "73-AC10",
+      "text": "Actions は PR にブランチ名から `sdd:tier-N` ラベルを付け、ブランチ名と食い違う `sdd:tier-N` ラベルがあれば CI を失敗にする"
+    },
+    {
+      "id": "73-AC11",
+      "text": "`sdd-board.sh sync` は今のブランチの Issue のカードを割り出したフェーズに更新し、カードがなければボードに入れる。ネットワーク・認証・設定がないときは警告して終了コード 0 で終わる"
+    },
+    {
+      "id": "73-AC12",
+      "text": "`sdd-board.sh init` はボードと Phase フィールドを作り、開いている Issue をすべて「未着手」で取り込む。取り込みだけを行うサブコマンドがあり、何度実行しても結果が変わらない"
+    },
+    {
+      "id": "73-AC13",
+      "text": "Actions のワークフローは、Issue 作成でカードを「未着手」に、Issue が完了で閉じたら done、対応しない・重複で閉じたらアーカイブ、PR の作成・更新でフェーズを割り出し直し、マージで done にする。マージせずに閉じた PR ではカードを変えない。secret `SDD_PROJECT_TOKEN` がなければ警告して成功で終わる"
+    },
+    {
+      "id": "73-AC14",
+      "text": "sdd-reviewer の確認項目が、state.json / tasks.json ではなく、ブランチ名・ディレクトリ名・Issue 番号の一致と `freeze.json` の正しさを確かめる"
+    },
+    {
+      "id": "73-AC15",
+      "text": "`templates/tasks.md` の「CI green」「sdd-reviewer 合格」がチェック欄ではなくなる"
+    },
+    {
+      "id": "73-AC16",
+      "text": "`integration/update.sh` が新しいワークフローを配り、`kanban-pages.yml` を配らない"
+    },
+    {
+      "id": "73-AC17",
+      "text": "`docs/migration.md` に移行手順（state.json / tasks.json の削除、`.sdd/board.json`、secret、ワークフロー、作業中ブランチの扱い、ビューの作り方）がある"
+    },
+    {
+      "id": "73-AC18",
+      "text": "このリポジトリ自身が新しい仕組みに移行している"
+    }
+  ]
+}
