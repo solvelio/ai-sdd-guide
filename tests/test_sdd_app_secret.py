@@ -114,6 +114,31 @@ class SddAppSecretTest(unittest.TestCase):
         self.assertEqual(len(self.env.secret_sets()), 1)
         self.assertFalse([c for c in self.env.joined() if "PUT" in c and "contents" in c])
 
+    def test_warns_loudly_when_board_json_lacks_app_id(self):
+        t = table(board_app_id=None)
+        t["repo list solvelio"] = {"stdout": "solvelio/x\n"}
+        r = self.env.run(t, ["--op-ref", REF, "--app-id", "42", "solvelio/x"])
+        out = r.stdout + r.stderr
+        self.assertIn("app_id", out)
+        self.assertIn("失敗", out)
+        t2 = table(board_app_id=None)
+        t2["repo list solvelio"] = {"stdout": "solvelio/x\n"}
+        r = self.env.run(t2, ["--op-ref", REF, "--app-id", "42", "--all", "--org", "solvelio"])
+        # --all with no board.json app_id: repo has board.json (reads "null" -> blank id)
+        out = r.stdout + r.stderr
+        self.assertIn("失敗", out)
+        self.assertIn("app_id がないリポジトリ", out)
+        self.assertIn("solvelio/x", out.split("app_id がないリポジトリ")[-1])
+
+    def test_all_excludes_archived_repos(self):
+        t = table()
+        t["repo list solvelio"] = {"stdout": "solvelio/x\n"}
+        r = self.env.run(t, ["--op-ref", REF, "--all", "--org", "solvelio"])
+        self.assertEqual(r.returncode, 0, r.stderr)
+        lists = [c for c in self.env.joined() if c.startswith("repo list")]
+        self.assertEqual(len(lists), 1)
+        self.assertIn("--no-archived", lists[0])
+
     def test_all_selects_repos_with_board_json(self):
         t = table()
         t["repo list solvelio"] = {"stdout": "solvelio/x\nsolvelio/nob\n"}

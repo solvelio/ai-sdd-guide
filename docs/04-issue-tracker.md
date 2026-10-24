@@ -49,11 +49,11 @@ bash vendor/ai-sdd-guide/orchestration/tools/sdd-app-secret.sh \
   --op-ref "op://<Vault>/<Item>/<field>" --all --org ORG
 ```
 
-`--dry-run` で配る先だけを確かめられる。`--app-id N` は、インストールの確認に使う App ID を直接指定する（省略すると各リポジトリの `board.json` の `app_id` を使う）。`board.json` に `app_id` がないリポジトリには注意を出す。スクリプトは、App が **All repositories** にインストールされているかを確かめ、そうでなければ案内を出して止まる。リポジトリを App のインストールに足すことはしない。
+`--dry-run` で配る先だけを確かめられる。`--app-id N` は、インストールの確認に使う App ID を直接指定する（省略すると各リポジトリの `board.json` の `app_id` を使う）。`app_id` は既定ブランチの `board.json` から読むので、board.json の PR を先にマージしてから実行するか、`--app-id` を渡す。`board.json` に `app_id` がないリポジトリには鍵を配っても、`app_id` をマージするまでそのリポジトリの SDD Board ワークフローは失敗する（鍵があって `app_id` がない設定は誤りとして扱われる）。スクリプトは警告を出し、`--all` では最後に該当リポジトリを一覧する。アーカイブ済みのリポジトリは `--all` の対象外。スクリプトは、App が **All repositories** にインストールされているかを確かめ、そうでなければ案内を出して止まる。リポジトリを App のインストールに足すことはしない。
 
 ### リポジトリを足すとき
 
-1. `.sdd/board.json`（`owner`・`project`・`app_id`）を PR で置く。
+1. `.sdd/board.json`（`owner`・`project`・`app_id`）を PR で置き、**マージする**（スクリプトは既定ブランチから `app_id` を読む。マージ前に実行するなら `--app-id` を渡す）。
 2. そのリポジトリに対して `sdd-app-secret.sh` を 1 回実行する。
 
 ### 予備の PAT

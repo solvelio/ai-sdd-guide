@@ -44,3 +44,12 @@ def test_pat_scope_wording():
     hint = read("integration/ci/sdd_board.py")
     for word in ("repo", "project", "read:org"):
         assert word in hint, word
+
+
+def test_docs_warn_missing_app_id_and_default_branch():
+    for rel in ("docs/04-issue-tracker.md", "docs/migration.md"):
+        text = read(rel)
+        assert "既定ブランチ" in text, rel
+        assert "--app-id" in text, rel
+    assert "失敗" in read("docs/04-issue-tracker.md")
+    assert "失敗" in read("docs/migration.md")

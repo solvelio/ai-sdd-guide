@@ -13,7 +13,7 @@ set -Eeuo pipefail
 trap 'exit 2' ERR
 
 SECRET=SDD_APP_PRIVATE_KEY
-REF=""; APP_ID=""; DRY=0; ALL=0; ORG=""; TARGETS=()
+REF=""; APP_ID=""; DRY=0; ALL=0; ORG=""; TARGETS=(); NOAPP=()
 
 die() { echo "エラー: $*" >&2; exit 1; }
 
@@ -50,7 +50,7 @@ board_app_id() {
 }
 
 if [ "$ALL" -eq 1 ]; then
-  list=$(gh repo list "$ORG" --json nameWithOwner --limit 1000 --jq '.[].nameWithOwner')
+  list=$(gh repo list "$ORG" --no-archived --json nameWithOwner --limit 1000 --jq '.[].nameWithOwner')
   TARGETS=()
   for r in $list; do
     if board_app_id "$r" >/dev/null; then TARGETS+=("$r"); fi
@@ -75,7 +75,6 @@ for r in "${TARGETS[@]}"; do
 done
 sel=$(gh api --paginate "/orgs/$ORG_OWNER/installations" \
   --jq ".installations[] | select(.app_id == $APP_ID) | .repository_selection")
-sel="${sel%%$'\n'*}"
 [ -n "$sel" ] || die "$ORG_OWNER に App ID $APP_ID のインストール先が見つかりません"
 if [ "$sel" != "all" ]; then
   die "App のインストール先が All repositories ではありません。$ORG_OWNER の Settings → GitHub Apps → 該当の App → Configure → Repository access → All repositories に変えてから、もう一度実行してください"
@@ -87,7 +86,10 @@ for repo in "${TARGETS[@]}"; do
 
   if [ "$DRY" -eq 1 ]; then
     echo "  [dry-run] $SECRET を $repo に設定する（op read ${REF}）"
-    [ -n "$bid" ] || echo "  [dry-run] 注意: board.json に app_id がありません（書き換えません）"
+    if [ -z "$bid" ]; then
+      NOAPP+=("$repo")
+      echo "  [dry-run] 警告: $repo の board.json に app_id がありません。app_id をマージするまで、このリポジトリの SDD Board ワークフローは失敗します（鍵があって app_id がない設定は誤りとして扱われます）"
+    fi
     continue
   fi
 
@@ -111,5 +113,12 @@ for repo in "${TARGETS[@]}"; do
   [ "${st[1]}" -eq 0 ] || { echo "エラー: $repo への $SECRET の設定に失敗しました" >&2; exit 2; }
   echo "  $SECRET を設定しました"
 
-  [ -n "$bid" ] || echo "  注意: board.json に app_id がありません。追記してください（このスクリプトは書き換えません）"
+  if [ -z "$bid" ]; then
+    NOAPP+=("$repo")
+    echo "  警告: $repo の board.json に app_id がありません。app_id をマージするまで、このリポジトリの SDD Board ワークフローは失敗します（鍵があって app_id がない設定は誤りとして扱われます）。このスクリプトは board.json を書き換えません"
+  fi
 done
+
+if [ "$ALL" -eq 1 ] && [ ${#NOAPP[@]} -gt 0 ]; then
+  echo "警告: app_id がないリポジトリ（SDD Board ワークフローは失敗します）: ${NOAPP[*]}"
+fi
