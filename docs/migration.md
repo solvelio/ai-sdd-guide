@@ -293,7 +293,7 @@ consumer repo では次の順に行う。
 6. **`SDD_PROJECT_TOKEN` を登録する。** classic PAT（`repo`（private リポジトリの場合）・`project`・`read:org`）を作り、repo secret `SDD_PROJECT_TOKEN` に登録する（`sdd-board.yml` が使う）。v3.1 以降は GitHub App を使うのが望ましい（下の「v3.1」）。
 7. **`sdd-board.sh init` を実行する。** `bash vendor/ai-sdd-guide/orchestration/tools/sdd-board.sh init [--owner OWNER] [--title TITLE]`。Project と Phase フィールドを作り、`.sdd/board.json`（`owner`・`project`・任意で `tier0_branch_prefixes`）を書き、open な Issue をボードに取り込む。`.sdd/board.json` はコミットする。
    - ボードは 1 アカウントに 1 つ。アカウントにすでに SDD のボードがあるときは、`init` の前にその `owner` / `project` を `.sdd/board.json` に書いておく（`{"owner": "...", "project": 3}`）。そうすれば `init` は新しい Project を作らず、Phase フィールドの確認と Issue の取り込みだけを行う。書かずに実行すると 2 つ目の Project ができる。
-   - ローカルの `gh` には `project` スコープが要る: `gh auth refresh -s project`。
+   - ローカルの `gh` には `project` と `read:org` のスコープが要る: `gh auth refresh -s project,read:org`。
 8. **リポジトリごとのビューを作る。** Projects の画面でビューを足し、絞り込みに `repo:owner/name` を指定する。
 9. **以降、新しい作業にはすべて Issue が要る。** Tier 0 も例外ではない（`t0/<Issue番号>-<名前>`）。dependabot / renovate などの bot ブランチは `tier0_branch_prefixes` で除外される。
 
