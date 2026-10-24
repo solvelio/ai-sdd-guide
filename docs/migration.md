@@ -308,6 +308,6 @@ consumer repo では次の順に行う。
 1. **App を作る。** Webhook の Active を外し、Organization の Projects を Read and write、リポジトリの Issues / Pull requests / Metadata を Read-only にして、Organization に **All repositories** でインストールする。
 2. **鍵を 1Password へ入れる。** 秘密鍵を生成して `.pem` を 1Password に保管し、ダウンロードしたファイルは消す。
 3. **各リポジトリの `.sdd/board.json` に `app_id` を書く。** PR で入れる。
-4. **鍵を配る。** Mac で `bash vendor/ai-sdd-guide/orchestration/tools/sdd-app-secret.sh --op-ref <op://...> OWNER/NAME`（Organization 全体なら `--all --org ORG`）を実行し、repo secret `SDD_APP_PRIVATE_KEY` を登録する。
+4. **鍵を配る。** Mac で `bash vendor/ai-sdd-guide/orchestration/tools/sdd-app-secret.sh --op-ref "op://<保管庫>/<項目>/<欄>" OWNER/NAME`（Organization 全体なら `--all --org ORG`）を実行し、repo secret `SDD_APP_PRIVATE_KEY` を登録する。
 5. **PR の CI で App で動くことを確かめる。** `sdd-board.yml` の実行で、App のトークンが作られてボードが更新されていること。
 6. **`SDD_PROJECT_TOKEN` を消し、PAT を無効にする。** 確かめたあと、repo secret `SDD_PROJECT_TOKEN` を削除し、GitHub の画面で PAT を無効にする。
