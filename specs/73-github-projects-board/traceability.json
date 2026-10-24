@@ -1,0 +1,133 @@
+{
+  "issue": 73,
+  "issue_url": "https://github.com/toshikimiyagawa/ai-sdd-guide/issues/73",
+  "feature": "73-github-projects-board",
+  "entries": [
+    {
+      "issue_ac": "73-AC1",
+      "spec_ac": "SAC-1",
+      "task": "T8",
+      "test": "tests/test_no_legacy_state.py::test_no_legacy_instructions",
+      "status": "in-scope"
+    },
+    {
+      "issue_ac": "73-AC2",
+      "spec_ac": "SAC-2",
+      "task": "T1",
+      "test": "tests/test_sdd_state.py::test_parse_branch_invalid",
+      "status": "in-scope"
+    },
+    {
+      "issue_ac": "73-AC3",
+      "spec_ac": "SAC-3",
+      "task": "T1",
+      "test": "tests/test_sdd_state.py::test_tasks_md_checkbox_variants_do_not_change_hash",
+      "status": "in-scope"
+    },
+    {
+      "issue_ac": "73-AC4",
+      "spec_ac": "SAC-4",
+      "task": "T2",
+      "test": "tests/test_sdd_guard.py::test_tier2_branch_without_freeze_is_denied",
+      "status": "in-scope"
+    },
+    {
+      "issue_ac": "73-AC5",
+      "spec_ac": "SAC-5",
+      "task": "T2",
+      "test": "tests/test_sdd_guard.py::test_edit_after_frozen_spec_changed_is_denied",
+      "status": "in-scope"
+    },
+    {
+      "issue_ac": "73-AC6",
+      "spec_ac": "SAC-6",
+      "task": "T1",
+      "test": "tests/test_sdd_state.py::test_phase_tier2_sequence",
+      "status": "in-scope"
+    },
+    {
+      "issue_ac": "73-AC7",
+      "spec_ac": "SAC-7",
+      "task": "T3",
+      "test": "tests/test_skill_reminder.py::test_reminder_implement_phase",
+      "status": "in-scope"
+    },
+    {
+      "issue_ac": "73-AC8",
+      "spec_ac": "SAC-8",
+      "task": "T4",
+      "test": "tests/test_sdd_validate.py::test_branch_from_github_head_ref",
+      "status": "in-scope"
+    },
+    {
+      "issue_ac": "73-AC9",
+      "spec_ac": "SAC-9",
+      "task": "T4",
+      "test": "tests/test_sdd_validate.py::test_pr_unmatched_branch_fails",
+      "status": "in-scope"
+    },
+    {
+      "issue_ac": "73-AC10",
+      "spec_ac": "SAC-10",
+      "task": "T4",
+      "test": "tests/test_sdd_validate.py::test_pr_label_mismatch_fails",
+      "status": "in-scope"
+    },
+    {
+      "issue_ac": "73-AC11",
+      "spec_ac": "SAC-11",
+      "task": "T6",
+      "test": "tests/test_sdd_board.py::test_sync_updates_phase_from_branch",
+      "status": "in-scope"
+    },
+    {
+      "issue_ac": "73-AC12",
+      "spec_ac": "SAC-12",
+      "task": "T6",
+      "test": "tests/test_sdd_board.py::test_import_twice_is_idempotent",
+      "status": "in-scope"
+    },
+    {
+      "issue_ac": "73-AC13",
+      "spec_ac": "SAC-13",
+      "task": "T7",
+      "test": "tests/test_sdd_board_workflow.py::test_calls_board_subcommands",
+      "status": "in-scope"
+    },
+    {
+      "issue_ac": "73-AC14",
+      "spec_ac": "SAC-14",
+      "task": "T8",
+      "test": "tests/test_rules_freeze_verify.py::test_sdd_reviewer_checks_branch_and_freeze",
+      "status": "in-scope"
+    },
+    {
+      "issue_ac": "73-AC15",
+      "spec_ac": "SAC-15",
+      "task": "T8",
+      "test": "tests/test_rules_freeze_verify.py::test_tasks_template_completion_has_no_checkboxes",
+      "status": "in-scope"
+    },
+    {
+      "issue_ac": "73-AC16",
+      "spec_ac": "SAC-16",
+      "task": "T9",
+      "test": "tests/test_update_sh.py::test_update_sh_copies_board_workflow",
+      "status": "in-scope"
+    },
+    {
+      "issue_ac": "73-AC17",
+      "spec_ac": "SAC-17",
+      "task": "T9",
+      "test": "tests/test_migration_guide.py::test_migration_guide_projects_board_section",
+      "status": "in-scope"
+    },
+    {
+      "issue_ac": "73-AC18",
+      "spec_ac": "SAC-18",
+      "task": "T10",
+      "test": "tests/test_self_migration.py::test_validator_passes_for_this_feature",
+      "status": "in-scope"
+    }
+  ]
+}

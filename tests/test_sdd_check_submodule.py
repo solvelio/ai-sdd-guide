@@ -1,5 +1,5 @@
 """sdd-check.yml must work when copied into a consumer with the guide at vendor/ai-sdd-guide."""
-import json
+import os
 import re
 import subprocess
 from pathlib import Path
@@ -44,18 +44,58 @@ def test_sdd_job_checkout_fetches_submodules():
     _assert_submodule_fix(WORKFLOW.read_text())
 
 
-def test_sdd_validate_step_runs_in_consumer_layout(tmp_path):
-    (tmp_path / "vendor").mkdir()
-    (tmp_path / "vendor" / "ai-sdd-guide").symlink_to(ROOT)
-    (tmp_path / ".sdd").mkdir()
-    (tmp_path / ".sdd" / "state.json").write_text(
-        json.dumps({"tier": 0, "phase": "done", "note": "no active feature"})
-    )
+def _run_validate_step(tmp_path, head_ref, labels=""):
+    (tmp_path / "vendor").mkdir(exist_ok=True)
+    link = tmp_path / "vendor" / "ai-sdd-guide"
+    if not link.exists():
+        link.symlink_to(ROOT)
     script = _step_run_script(WORKFLOW.read_text(), "Run sdd-validate")
-    result = subprocess.run(
-        ["bash", "-e", "-c", script], cwd=tmp_path, capture_output=True, text=True
+    env = {**os.environ, "SDD_HEAD_REF": head_ref, "SDD_PR_LABELS": labels}
+    return subprocess.run(
+        ["bash", "-e", "-c", script], cwd=tmp_path, capture_output=True, text=True, env=env
     )
+
+
+def test_sdd_validate_step_runs_in_consumer_layout(tmp_path):
+    result = _run_validate_step(tmp_path, "t0/1-x")
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_sdd_validate_step_rejects_bad_branch(tmp_path):
+    result = _run_validate_step(tmp_path, "feat/x")
+    assert result.returncode == 1, result.stdout + result.stderr
+
+
+def test_sdd_validate_step_rejects_tier2_without_specs(tmp_path):
+    result = _run_validate_step(tmp_path, "t2/1-x")
+    assert result.returncode == 1, result.stdout + result.stderr
+
+
+def test_sdd_validate_step_rejects_label_mismatch(tmp_path):
+    result = _run_validate_step(tmp_path, "t0/1-x", "sdd:tier-2")
+    assert result.returncode == 1, result.stdout + result.stderr
+
+
+def test_no_state_reset_gate():
+    text = WORKFLOW.read_text()
+    assert "State reset gate" not in text
+    assert "state.json" not in text
+
+
+def test_no_orchestration_job():
+    text = WORKFLOW.read_text()
+    assert not re.search(r"^  orchestration:", text, re.M)
+    assert "tasks.json" not in text
+    assert "kanban" not in text.lower()
+
+
+def test_validate_step_passes_pr_context():
+    run = _step_run_script(WORKFLOW.read_text(), "Run sdd-validate")
+    assert re.search(r"--pr(?![-\w])", run) and "--pr-labels" in run
+    assert "${{" not in run
+    text = WORKFLOW.read_text()
+    step = text[text.index("- name: Run sdd-validate"):text.index("- name: Tests")]
+    assert re.search(r"^\s+env:\n(?:\s+\w+: .*\n)*?\s+\w+: \$\{\{ github\.head_ref \}\}", step, re.M)
 
 
 def test_migration_guide_uses_submodule_validator_path():
@@ -120,3 +160,24 @@ def test_update_sh_preserves_guide_token_fallback(tmp_path):
 def test_sdd_job_checkout_does_not_persist_credentials():
     block = _sdd_checkout_block(WORKFLOW.read_text())
     assert re.search(r"^\s+persist-credentials: false$", block, re.M), block
+
+
+def test_pull_request_trigger_includes_label_events():
+    text = WORKFLOW.read_text()
+    assert re.search(r"^on:\n  pull_request:\n    types: \[[^\]]*\blabeled\b[^\]]*\bunlabeled\b", text, re.M) \
+        or re.search(r"types: \[[^\]]*\bunlabeled\b[^\]]*\blabeled\b", text)
+    for t in ("opened", "synchronize", "reopened"):
+        assert t in text.split("jobs:")[0]
+
+
+def test_board_workflows_document_token_scope_and_trust():
+    for p in (ROOT / "integration" / "ci" / "sdd-board.yml",
+              ROOT / ".github" / "workflows" / "sdd-board.yml"):
+        head = p.read_text().split("name: SDD Board")[0]
+        low = head.lower()
+        assert "fork" in low and "project" in low and "head" in low, p
+
+
+def test_update_sh_checks_python3():
+    assert re.search(r"^check_dep python3 python3 python3 python3", UPDATE_SH.read_text(), re.M)
+    assert "python3" in (ROOT / "integration" / "hooks" / "README.md").read_text().split("## Dependencies")[1]

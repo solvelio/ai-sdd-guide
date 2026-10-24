@@ -4,6 +4,7 @@
 name: SDD Check
 on:
   pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
 
 jobs:
   sdd:
@@ -17,41 +18,6 @@ jobs:
           token: ${{ secrets.SDD_GUIDE_TOKEN || github.token }}
           persist-credentials: false
 
-      - name: State reset gate
-        run: |
-          if [ ! -f ".sdd/state.json" ]; then
-            echo "No .sdd/state.json — state check skipped."; exit 0
-          fi
-          tier=$(jq -r '.tier // empty' .sdd/state.json)
-          phase=$(jq -r '.phase // empty' .sdd/state.json)
-          [ "$tier" = "0" ] && echo "Tier 0 — state check skipped." && exit 0
-          if [ "$phase" != "done" ]; then
-            echo "::error::.sdd/state.json phase is '$phase' (expected 'done'). Reset before creating a PR: {\"tier\": 0, \"phase\": \"done\", \"note\": \"no active feature\"}"
-            exit 1
-          fi
-          echo "state.json phase=done — OK."
-
-      - name: Spec gate
-        run: |
-          base="${{ github.event.pull_request.base.sha }}"
-          changed="$(git diff --name-only "$base"...HEAD)"
-          # Exempt paths: docs, specs, .sdd, vendor (incl. submodule entries),
-          # CI/tooling dirs (.claude/, .codex/, .github/), devcontainer, root dotfiles, and markdown.
-          src="$(echo "$changed" | grep -vE '^(docs/|specs/|\.sdd/|vendor/|\.claude/|\.codex/|\.github/|\.devcontainer/|\.[^/]+$|.*\.md$)' || true)"
-
-          labels='${{ toJSON(github.event.pull_request.labels.*.name) }}'
-          if echo "$labels" | grep -q 'sdd:tier-0'; then
-            echo "Tier 0 — spec gate skipped."; exit 0
-          fi
-          if [ -z "$src" ]; then
-            echo "No source changes — spec gate skipped."; exit 0
-          fi
-          if ! ls specs/*/spec.md >/dev/null 2>&1; then
-            echo "::error::Source changed but no specs/<feature>/spec.md found. Add a spec or label the PR 'sdd:tier-0'."
-            exit 1
-          fi
-          echo "Spec present."
-
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -60,48 +26,13 @@ jobs:
         run: pip install jsonschema
 
       - name: Run sdd-validate
+        env:
+          SDD_HEAD_REF: ${{ github.head_ref }}
+          SDD_PR_LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
         run: |
-          if [ ! -f ".sdd/state.json" ]; then
-            echo "No .sdd/state.json — sdd-validate skipped."
-            exit 0
-          fi
-          bash vendor/ai-sdd-guide/integration/ci/sdd-validate.sh --root .
+          bash vendor/ai-sdd-guide/integration/ci/sdd-validate.sh --root . --pr --branch "$SDD_HEAD_REF" --pr-labels "$SDD_PR_LABELS"
 
       - name: Tests
         run: |
           echo "TODO: replace with this project's test command"
           # e.g. npm test  /  pytest  /  go test ./...
-
-  orchestration:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Orchestration checks
-        run: |
-          # Skip if orchestration is not in use.
-          if [ ! -f ".sdd/tasks.json" ]; then
-            echo "No tasks.json — orchestration checks skipped."
-            exit 0
-          fi
-
-          failed=0
-
-          # No blocked tasks allowed on merge.
-          blocked=$(jq '[.[] | select(.status=="blocked")] | length' .sdd/tasks.json)
-          if [ "$blocked" -gt 0 ]; then
-            echo "::error::$blocked blocked task(s) in .sdd/tasks.json. Resolve before merging."
-            failed=$((failed + 1))
-          fi
-
-          # Every in_progress or pending implement task must have a handoff.md.
-          while IFS= read -r id; do
-            handoff="specs/$id/handoff.md"
-            if [ ! -f "$handoff" ]; then
-              echo "::error::Missing handoff.md for implement task '$id' (expected: $handoff)"
-              failed=$((failed + 1))
-            fi
-          done < <(jq -r '.[] | select(.phase=="implement" and (.status=="in_progress" or .status=="pending")) | .id' .sdd/tasks.json)
-
-          [ "$failed" -gt 0 ] && exit 1
-          echo "Orchestration checks passed."

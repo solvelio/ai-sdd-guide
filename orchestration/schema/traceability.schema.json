@@ -18,7 +18,7 @@
     "feature": {
       "type": "string",
       "pattern": "^[a-z0-9][a-z0-9-]*$",
-      "description": "Feature slug。specs/<feature>/ および state.json の feature と一致する。"
+      "description": "Feature slug。specs/<feature>/ のディレクトリ名（<Issue番号>-<名前>）と一致する。"
     },
     "entries": {
       "type": "array",

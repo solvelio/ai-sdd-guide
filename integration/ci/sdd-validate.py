@@ -5,13 +5,20 @@ exit 0 = all checks pass
 exit 1 = validation error
 exit 2 = internal error (fail-closed)
 """
+from __future__ import annotations
+
 import argparse
 import hashlib
 import json
+import os
 import re
 import subprocess
 import sys
 from pathlib import Path
+from typing import List, Optional
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import sdd_state  # noqa: E402
 
 try:
     import jsonschema
@@ -41,34 +48,8 @@ def _validate_schema(instance, schema: dict, label: str) -> list[str]:
         return [f"{label}: {exc.message}"]
 
 
-def check_schema_state(root: Path) -> list[str]:
-    """Check 1: Validate .sdd/state.json against state.schema.json."""
-    state_path = root / ".sdd" / "state.json"
-    if not state_path.exists():
-        return [f"state.json not found: {state_path}"]
-    schema = _load_schema("state.schema.json")
-    return _validate_schema(_load_json(state_path), schema, "state.json")
-
-
-def check_schema_tasks(root: Path, feature: str) -> list[str]:
-    """Check 2: Validate .sdd/tasks.json (skip if absent); error if active feature has no entry."""
-    tasks_path = root / ".sdd" / "tasks.json"
-    if not tasks_path.exists():
-        return []
-    schema = _load_schema("tasks.schema.json")
-    tasks = _load_json(tasks_path)
-    errors = _validate_schema(tasks, schema, "tasks.json")
-    if errors:
-        return errors
-    if feature:
-        ids = [t.get("id") for t in tasks]
-        if feature not in ids:
-            errors.append(f"tasks.json: no entry for feature '{feature}'")
-    return errors
-
-
 def check_schema_traceability(root: Path, feature: str) -> list[str]:
-    """Check 3: Validate traceability.json (Tier 2 only)."""
+    """Check 1: Validate traceability.json (Tier 2 only)."""
     path = root / "specs" / feature / "traceability.json"
     if not path.exists():
         return [f"traceability.json not found: {path}"]
@@ -76,46 +57,20 @@ def check_schema_traceability(root: Path, feature: str) -> list[str]:
     return _validate_schema(_load_json(path), schema, "traceability.json")
 
 
-def check_state_tasks_consistency(root: Path, feature: str) -> list[str]:
-    """Check 4: state.json feature/phase must match the tasks.json entry."""
-    tasks_path = root / ".sdd" / "tasks.json"
-    if not tasks_path.exists():
-        return []
-    state = _load_json(root / ".sdd" / "state.json")
-    tasks = _load_json(tasks_path)
-    state_feature = state.get("feature", "")
-    state_phase = state.get("phase", "")
-    if not state_feature:
-        return []
-    entries = {t.get("id"): t for t in tasks if "id" in t}
-    if state_feature not in entries:
-        return [f"state.json feature='{state_feature}' has no matching entry in tasks.json"]
-    entry_phase = entries[state_feature].get("phase", "")
-    if entry_phase != state_phase:
-        return [
-            f"state.json phase='{state_phase}' does not match tasks.json entry"
-            f" phase='{entry_phase}' for feature '{state_feature}'"
-        ]
-    return []
-
-
 def check_tasks_md_consistency(root: Path, feature: str) -> list[str]:
-    """Check 5: For phase=verify, all tasks.md checkboxes must be complete."""
-    state = _load_json(root / ".sdd" / "state.json")
-    if state.get("phase") != "verify":
-        return []
+    """Check 2: all tasks.md checkboxes must be complete (run only with --pr)."""
     tasks_md = root / "specs" / feature / "tasks.md"
     if not tasks_md.exists():
         return [f"tasks.md not found: {tasks_md}"]
     errors = []
     for i, line in enumerate(tasks_md.read_text().splitlines(), 1):
-        if re.match(r"\s*-\s*\[ \]", line):
+        if sdd_state.checkbox_states(line) == [" "]:
             errors.append(f"tasks.md line {i}: unchecked item: {line.strip()}")
     return errors
 
 
 def check_traceability_internal(root: Path, feature: str) -> list[str]:
-    """Check 6: Duplicate spec_ac, task not in tasks.md, test file not found."""
+    """Check 4: Duplicate spec_ac, task not in tasks.md, test file not found."""
     path = root / "specs" / feature / "traceability.json"
     if not path.exists():
         return [f"traceability.json not found: {path}"]
@@ -181,7 +136,7 @@ def check_traceability_internal(root: Path, feature: str) -> list[str]:
 
 
 def check_scope_out(root: Path, feature: str) -> list[str]:
-    """Check 7: out-of-scope/deferred entries must have reason + HTTP(S) followup_issue."""
+    """Check 5: out-of-scope/deferred entries must have reason + HTTP(S) followup_issue."""
     path = root / "specs" / feature / "traceability.json"
     if not path.exists():
         return []
@@ -200,8 +155,13 @@ def check_scope_out(root: Path, feature: str) -> list[str]:
     return errors
 
 
+def _issue_of(feature: str) -> Optional[int]:
+    m = re.match(r"^([1-9][0-9]*)-", feature)
+    return int(m.group(1)) if m else None
+
+
 def check_issue_snapshot(root: Path, feature: str) -> list[str]:
-    """Check 8: issue-snapshot.json matches schema, hash, and traceability."""
+    """Check 6: issue-snapshot.json matches schema, hash, and traceability."""
     snapshot_path = root / "specs" / feature / "issue-snapshot.json"
     if not snapshot_path.exists():
         return [f"issue-snapshot.json not found: {snapshot_path}"]
@@ -231,6 +191,12 @@ def check_issue_snapshot(root: Path, feature: str) -> list[str]:
         )
 
     issue = snapshot["issue"]
+    expected_issue = _issue_of(feature)
+    if expected_issue is not None and issue != expected_issue:
+        errors.append(
+            f"issue-snapshot.json: issue-snapshot issue {issue} does not match"
+            f" directory {feature}"
+        )
     stable_acs = snapshot.get("stable_acs", [])
     for index, ac in enumerate(stable_acs, 1):
         expected_id = f"{issue}-AC{index}"
@@ -272,7 +238,7 @@ def check_issue_snapshot(root: Path, feature: str) -> list[str]:
 
 
 def check_evidence(root: Path, feature: str) -> list[str]:
-    """Check 9: evidence.json matches schema and references an existing commit."""
+    """Check 7: evidence.json matches schema and references an existing commit."""
     evidence_path = root / "specs" / feature / "evidence.json"
     if not evidence_path.exists():
         return [f"evidence.json not found: {evidence_path}"]
@@ -331,72 +297,114 @@ def _resolve_root() -> Path:
         sys.exit(2)
 
 
+DEFAULT_TIER0_PREFIXES = ["dependabot/", "renovate/"]
+
+
+def _tier0_prefixes(root: Path) -> List[str]:
+    try:
+        data = json.loads((root / ".sdd" / "board.json").read_text(encoding="utf-8"))
+        prefixes = data.get("tier0_branch_prefixes")
+        if isinstance(prefixes, list):
+            valid = [p for p in prefixes if isinstance(p, str) and p]
+            if valid:
+                return valid
+    except (OSError, ValueError, AttributeError):
+        pass
+    return list(DEFAULT_TIER0_PREFIXES)
+
+
+def check_pr_labels(labels: List[str], tier: int) -> List[str]:
+    errors = []
+    for label in labels:
+        m = re.match(r"^sdd:tier-([0-9]+)$", label)
+        if m and int(m.group(1)) != tier:
+            errors.append(
+                f"PR label '{label}' does not match branch Tier {tier}"
+            )
+    return errors
+
+
+def check_freeze(root: Path, feature: str, tier: int, pr: bool) -> List[str]:
+    spec_dir = root / "specs" / feature
+    status, reasons = sdd_state.freeze_status(spec_dir, tier)
+    if status == "invalid":
+        return [f"freeze.json: {reason}" for reason in reasons]
+    if status == "missing":
+        if pr:
+            return [f"freeze.json not found: {spec_dir / 'freeze.json'}"]
+        return []
+    if not (spec_dir / "handoff.md").is_file():
+        return [f"handoff.md not found: {spec_dir / 'handoff.md'} (freeze.json exists)"]
+    return []
+
+
+def _fail(errors: List[str]) -> None:
+    if not errors:
+        return
+    for e in errors:
+        print(f"ERROR: {e}", file=sys.stderr)
+    sys.exit(1)
+
+
 def main() -> None:  # noqa: C901
     parser = argparse.ArgumentParser(description="SDD core validator")
     parser.add_argument("--root", type=Path, help="Repository root")
-    parser.add_argument("--feature", type=str, help="Feature slug")
+    parser.add_argument("--branch", type=str, help="Branch name (default: GITHUB_HEAD_REF, then git)")
+    parser.add_argument("--feature", type=str, help="Feature directory override (<issue>-<name>)")
+    parser.add_argument("--pr", action="store_true", help="Run in pull request mode")
+    parser.add_argument("--pr-labels", type=str, default="", help="Comma-separated PR labels")
     args = parser.parse_args()
 
     try:
         root = args.root or _resolve_root()
-        state_path = root / ".sdd" / "state.json"
+        branch = args.branch or os.environ.get("GITHUB_HEAD_REF") or sdd_state.current_branch(root)
+        info = sdd_state.parse_branch(branch)
+        labels = [x.strip() for x in args.pr_labels.split(",") if x.strip()]
 
-        # Check 1: state schema (always)
-        errors = check_schema_state(root)
-        if errors:
-            for e in errors:
-                print(f"ERROR: {e}", file=sys.stderr)
-            sys.exit(1)
+        if info is None:
+            if not args.pr:
+                print("sdd-validate: no SDD branch — feature checks skipped. PASS")
+                sys.exit(0)
+            prefixes = _tier0_prefixes(root)
+            if branch and any(branch.startswith(p) for p in prefixes):
+                _fail(check_pr_labels(labels, 0))
+                print(f"sdd-validate: bot branch '{branch}' treated as Tier 0 — feature checks skipped. PASS")
+                sys.exit(0)
+            _fail([
+                f"branch '{branch}' is not an SDD branch."
+                f" Name it {sdd_state.BRANCH_SHAPE} (e.g. t2/12-my-feature)"
+            ])
 
-        state = _load_json(state_path)
-        tier = state.get("tier", -1)
-        phase = state.get("phase", "")
+        tier = info.tier
+        label_errors = check_pr_labels(labels, tier)
 
-        # done-reset: skip feature checks
-        if tier == 0 and phase == "done":
-            print("sdd-validate: tier=0 phase=done — feature checks skipped. PASS")
+        if tier == 0:
+            _fail(label_errors)
+            print("sdd-validate: tier=0 — feature checks skipped. PASS")
             sys.exit(0)
 
-        feature = args.feature or state.get("feature", "")
-        if not feature:
-            print("ERROR: no feature in state.json and --feature not provided", file=sys.stderr)
-            sys.exit(1)
+        feature = args.feature or info.feature
+        all_errors: List[str] = list(label_errors)
 
-        all_errors: list[str] = []
+        all_errors.extend(check_freeze(root, feature, tier, args.pr))
 
-        # Check 2: tasks schema
-        all_errors.extend(check_schema_tasks(root, feature))
-
-        # Check 3: traceability schema (Tier 2)
         if tier == 2:
+            # Check 1: traceability schema
             all_errors.extend(check_schema_traceability(root, feature))
-
-        # Check 4: state/tasks consistency
-        all_errors.extend(check_state_tasks_consistency(root, feature))
-
-        # Check 5: tasks.md consistency (phase=verify)
-        all_errors.extend(check_tasks_md_consistency(root, feature))
-
-        # Check 6: traceability internal (Tier 2)
-        if tier == 2:
+            # Check 2: tasks.md consistency (PR only)
+            if args.pr:
+                all_errors.extend(check_tasks_md_consistency(root, feature))
+            # Check 4: traceability internal
             all_errors.extend(check_traceability_internal(root, feature))
-
-        # Check 7: scope-out (Tier 2)
-        if tier == 2:
+            # Check 5: scope-out
             all_errors.extend(check_scope_out(root, feature))
-
-        # Check 8: issue snapshot (Tier 2)
-        if tier == 2:
+            # Check 6: issue snapshot
             all_errors.extend(check_issue_snapshot(root, feature))
-
-        # Check 9: evidence (Tier 2)
-        if tier == 2:
+            # Check 7: evidence
             all_errors.extend(check_evidence(root, feature))
 
         if all_errors:
-            for e in all_errors:
-                print(f"ERROR: {e}", file=sys.stderr)
-            sys.exit(1)
+            _fail(all_errors)
 
         print(f"sdd-validate: all checks passed for feature '{feature}'")
 

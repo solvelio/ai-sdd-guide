@@ -6,6 +6,6 @@
 
 **RED確認コマンド:**
 ```bash
-bash integration/ci/sdd-validate.sh --root tests/fixtures/fixture-duplicate-spec-ac
+bash integration/ci/sdd-validate.sh --root tests/fixtures/fixture-duplicate-spec-ac --branch t2/99-my-feature
 # → exit 1, stderr に "duplicate spec_ac" が含まれる
 ```

@@ -1,7 +1,11 @@
-"""Tests for sdd-validate.py and its JSON schemas."""
+"""Tests for sdd-validate.py."""
 import importlib.util
 import hashlib
 import json
+import os
+import shutil
+import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 import jsonschema
@@ -10,74 +14,12 @@ import pytest
 ROOT = Path(__file__).parents[1]
 SCHEMA_DIR = ROOT / "orchestration" / "schema"
 FIXTURES = ROOT / "tests" / "fixtures"
+sys.path.insert(0, str(ROOT / "integration" / "ci"))
+import sdd_state  # noqa: E402
 
 
 def load_schema(name: str) -> dict:
     return json.loads((SCHEMA_DIR / name).read_text())
-
-
-# ---------------------------------------------------------------------------
-# state.schema.json
-# ---------------------------------------------------------------------------
-
-def test_state_schema_valid_active():
-    schema = load_schema("state.schema.json")
-    instance = {"tier": 2, "phase": "implement", "feature": "my-feature"}
-    jsonschema.validate(instance, schema)
-
-
-def test_state_schema_valid_done_reset():
-    schema = load_schema("state.schema.json")
-    instance = {"tier": 0, "phase": "done", "note": "no active feature"}
-    jsonschema.validate(instance, schema)
-
-
-def test_state_schema_active_missing_feature_fails():
-    schema = load_schema("state.schema.json")
-    instance = {"tier": 2, "phase": "implement"}  # feature 欠落
-    with pytest.raises(jsonschema.ValidationError):
-        jsonschema.validate(instance, schema)
-
-
-def test_state_schema_invalid_phase_fails():
-    schema = load_schema("state.schema.json")
-    instance = {"tier": 2, "phase": "unknown", "feature": "my-feature"}
-    with pytest.raises(jsonschema.ValidationError):
-        jsonschema.validate(instance, schema)
-
-
-# ---------------------------------------------------------------------------
-# tasks.schema.json
-# ---------------------------------------------------------------------------
-
-def test_tasks_schema_valid():
-    schema = load_schema("tasks.schema.json")
-    instance = [{"id": "my-feature", "phase": "implement", "status": "in_progress",
-                  "handoff": None, "blocked_reason": None}]
-    jsonschema.validate(instance, schema)
-
-
-def test_tasks_schema_blocked_with_reason_valid():
-    schema = load_schema("tasks.schema.json")
-    instance = [{"id": "my-feature", "phase": "implement", "status": "blocked",
-                  "handoff": None, "blocked_reason": "waiting for external API"}]
-    jsonschema.validate(instance, schema)
-
-
-def test_tasks_schema_blocked_without_reason_fails():
-    schema = load_schema("tasks.schema.json")
-    instance = [{"id": "my-feature", "phase": "implement", "status": "blocked",
-                  "handoff": None, "blocked_reason": None}]
-    with pytest.raises(jsonschema.ValidationError):
-        jsonschema.validate(instance, schema)
-
-
-def test_tasks_schema_not_blocked_with_reason_fails():
-    schema = load_schema("tasks.schema.json")
-    instance = [{"id": "my-feature", "phase": "implement", "status": "in_progress",
-                  "handoff": None, "blocked_reason": "should be null"}]
-    with pytest.raises(jsonschema.ValidationError):
-        jsonschema.validate(instance, schema)
 
 
 # ---------------------------------------------------------------------------
@@ -98,120 +40,10 @@ _v = _load_module()
 
 
 # ---------------------------------------------------------------------------
-# check_schema_state
-# ---------------------------------------------------------------------------
-
-def test_check_schema_state_valid_active(tmp_path):
-    (tmp_path / ".sdd").mkdir()
-    (tmp_path / ".sdd" / "state.json").write_text(
-        json.dumps({"tier": 2, "phase": "implement", "feature": "my-feature"})
-    )
-    assert _v.check_schema_state(tmp_path) == []
-
-
-def test_check_schema_state_valid_done(tmp_path):
-    (tmp_path / ".sdd").mkdir()
-    (tmp_path / ".sdd" / "state.json").write_text(
-        json.dumps({"tier": 0, "phase": "done"})
-    )
-    assert _v.check_schema_state(tmp_path) == []
-
-
-def test_check_schema_state_missing_feature_error(tmp_path):
-    (tmp_path / ".sdd").mkdir()
-    (tmp_path / ".sdd" / "state.json").write_text(
-        json.dumps({"tier": 2, "phase": "implement"})
-    )
-    errors = _v.check_schema_state(tmp_path)
-    assert len(errors) == 1
-
-
-def test_check_schema_state_file_missing_error(tmp_path):
-    errors = _v.check_schema_state(tmp_path)
-    assert any("not found" in e for e in errors)
-
-
-# ---------------------------------------------------------------------------
-# check_schema_tasks
-# ---------------------------------------------------------------------------
-
-def test_check_schema_tasks_no_file_skips(tmp_path):
-    assert _v.check_schema_tasks(tmp_path, "my-feature") == []
-
-
-def test_check_schema_tasks_valid(tmp_path):
-    (tmp_path / ".sdd").mkdir()
-    (tmp_path / ".sdd" / "tasks.json").write_text(json.dumps([
-        {"id": "my-feature", "phase": "implement", "status": "in_progress",
-         "handoff": None, "blocked_reason": None}
-    ]))
-    assert _v.check_schema_tasks(tmp_path, "my-feature") == []
-
-
-def test_check_schema_tasks_feature_missing_in_tasks(tmp_path):
-    (tmp_path / ".sdd").mkdir()
-    (tmp_path / ".sdd" / "tasks.json").write_text(json.dumps([
-        {"id": "other-feature", "phase": "implement", "status": "in_progress",
-         "handoff": None, "blocked_reason": None}
-    ]))
-    errors = _v.check_schema_tasks(tmp_path, "my-feature")
-    assert any("my-feature" in e for e in errors)
-
-
-# ---------------------------------------------------------------------------
-# check_state_tasks_consistency
-# ---------------------------------------------------------------------------
-
-def test_check_state_tasks_consistency_no_tasks_file(tmp_path):
-    (tmp_path / ".sdd").mkdir()
-    (tmp_path / ".sdd" / "state.json").write_text(
-        json.dumps({"tier": 2, "phase": "implement", "feature": "foo"})
-    )
-    assert _v.check_state_tasks_consistency(tmp_path, "foo") == []
-
-
-def test_check_state_tasks_consistency_match(tmp_path):
-    (tmp_path / ".sdd").mkdir()
-    (tmp_path / ".sdd" / "state.json").write_text(
-        json.dumps({"tier": 2, "phase": "implement", "feature": "foo"})
-    )
-    (tmp_path / ".sdd" / "tasks.json").write_text(json.dumps([
-        {"id": "foo", "phase": "implement", "status": "in_progress",
-         "handoff": None, "blocked_reason": None}
-    ]))
-    assert _v.check_state_tasks_consistency(tmp_path, "foo") == []
-
-
-def test_check_state_tasks_consistency_mismatch(tmp_path):
-    (tmp_path / ".sdd").mkdir()
-    (tmp_path / ".sdd" / "state.json").write_text(
-        json.dumps({"tier": 2, "phase": "implement", "feature": "foo"})
-    )
-    (tmp_path / ".sdd" / "tasks.json").write_text(json.dumps([
-        {"id": "bar", "phase": "implement", "status": "in_progress",
-         "handoff": None, "blocked_reason": None}
-    ]))
-    errors = _v.check_state_tasks_consistency(tmp_path, "foo")
-    assert any("foo" in e for e in errors)
-
-
-# ---------------------------------------------------------------------------
 # check_tasks_md_consistency
 # ---------------------------------------------------------------------------
 
-def test_check_tasks_md_not_verify_skips(tmp_path):
-    (tmp_path / ".sdd").mkdir()
-    (tmp_path / ".sdd" / "state.json").write_text(
-        json.dumps({"tier": 2, "phase": "implement", "feature": "foo"})
-    )
-    assert _v.check_tasks_md_consistency(tmp_path, "foo") == []
-
-
 def test_check_tasks_md_all_checked(tmp_path):
-    (tmp_path / ".sdd").mkdir()
-    (tmp_path / ".sdd" / "state.json").write_text(
-        json.dumps({"tier": 2, "phase": "verify", "feature": "foo"})
-    )
     (tmp_path / "specs" / "foo").mkdir(parents=True)
     (tmp_path / "specs" / "foo" / "tasks.md").write_text(
         "# Tasks\n- [x] T1: done task. AC: SAC-1\n"
@@ -220,10 +52,6 @@ def test_check_tasks_md_all_checked(tmp_path):
 
 
 def test_check_tasks_md_unchecked_item_error(tmp_path):
-    (tmp_path / ".sdd").mkdir()
-    (tmp_path / ".sdd" / "state.json").write_text(
-        json.dumps({"tier": 2, "phase": "verify", "feature": "foo"})
-    )
     (tmp_path / "specs" / "foo").mkdir(parents=True)
     (tmp_path / "specs" / "foo" / "tasks.md").write_text(
         "# Tasks\n- [ ] T1: incomplete task. AC: SAC-1\n"
@@ -395,55 +223,130 @@ def _run_sh(fixture_name: str, extra_args: list[str] | None = None) -> _subproce
     return _subprocess.run(cmd, capture_output=True, text=True)
 
 
+BRANCH = "t2/99-my-feature"
+
+
 def test_sh_valid_active_exits_0():
-    result = _run_sh("valid-active")
+    result = _run_sh("valid-active", ["--branch", BRANCH])
     assert result.returncode == 0
-
-
-def test_sh_valid_done_exits_0():
-    result = _run_sh("valid-done")
-    assert result.returncode == 0
-
-
-def test_sh_invalid_state_mismatch_exits_1():
-    result = _run_sh("invalid-state-mismatch")
-    assert result.returncode == 1
 
 
 def test_sh_invalid_traceability_exits_1():
-    result = _run_sh("invalid-traceability")
+    result = _run_sh("invalid-traceability", ["--branch", BRANCH])
     assert result.returncode == 1
 
 
 def test_sh_invalid_tasks_incomplete_exits_1():
-    result = _run_sh("invalid-tasks-incomplete")
+    result = _run_sh("invalid-tasks-incomplete", ["--branch", BRANCH, "--pr"])
+    assert result.returncode == 1
+    assert "unchecked item" in result.stderr
+
+
+def test_sh_missing_feature_dir_exits_1(tmp_path):
+    result = _run_sh_root(tmp_path, ["--branch", BRANCH])
     assert result.returncode == 1
 
 
-def test_sh_missing_state_json_exits_1(tmp_path):
+def _run_sh_root(root, extra_args, env=None):
     sh = ROOT / "integration" / "ci" / "sdd-validate.sh"
-    result = _subprocess.run(
-        ["bash", str(sh), "--root", str(tmp_path)],
-        capture_output=True, text=True,
+    full_env = dict(os.environ)
+    full_env.pop("GITHUB_HEAD_REF", None)
+    full_env.update(env or {})
+    return _subprocess.run(
+        ["bash", str(sh), "--root", str(root)] + extra_args,
+        capture_output=True, text=True, env=full_env,
     )
+
+
+def _copy_valid(tmp_path):
+    dest = tmp_path / "repo"
+    shutil.copytree(FIXTURES / "valid-active", dest)
+    sdd_state.create_freeze(dest / "specs" / "99-my-feature", 2, datetime.now(timezone.utc))
+    return dest
+
+
+def test_branch_from_github_head_ref(tmp_path):
+    root = _copy_valid(tmp_path)
+    ok = _run_sh_root(root, [], env={"GITHUB_HEAD_REF": BRANCH})
+    assert ok.returncode == 0, ok.stderr
+    assert "99-my-feature" in ok.stdout
+    (root / "specs" / "99-my-feature" / "traceability.json").write_text("{}")
+    bad = _run_sh_root(root, [], env={"GITHUB_HEAD_REF": BRANCH})
+    assert bad.returncode == 1
+
+
+def test_non_pr_unmatched_branch_skips_feature_checks(tmp_path):
+    result = _run_sh_root(tmp_path, ["--branch", "main"])
+    assert result.returncode == 0
+    assert "skipped" in result.stdout
+
+
+def test_pr_unmatched_branch_fails(tmp_path):
+    result = _run_sh_root(tmp_path, ["--pr", "--branch", "feat/x"])
     assert result.returncode == 1
+    assert "t<Tier>/<Issue番号>-<名前>" in result.stderr
 
 
-# ---------------------------------------------------------------------------
-# Fix 1: check_state_tasks_consistency — phase mismatch detection
-# ---------------------------------------------------------------------------
+def test_pr_bot_branch_is_tier0(tmp_path):
+    result = _run_sh_root(tmp_path, ["--pr", "--branch", "dependabot/npm/foo"])
+    assert result.returncode == 0, result.stderr
 
-def test_check_state_tasks_consistency_phase_mismatch(tmp_path):
+
+def test_pr_bot_prefix_from_board_json(tmp_path):
     (tmp_path / ".sdd").mkdir()
-    (tmp_path / ".sdd" / "state.json").write_text(
-        json.dumps({"tier": 2, "phase": "verify", "feature": "foo"})
+    (tmp_path / ".sdd" / "board.json").write_text(
+        json.dumps({"owner": "o", "project": 1, "tier0_branch_prefixes": ["bot/"]})
     )
-    (tmp_path / ".sdd" / "tasks.json").write_text(json.dumps([
-        {"id": "foo", "phase": "implement", "status": "in_progress",
-         "handoff": None, "blocked_reason": None}
-    ]))
-    errors = _v.check_state_tasks_consistency(tmp_path, "foo")
-    assert any("phase" in e for e in errors)
+    assert _run_sh_root(tmp_path, ["--pr", "--branch", "bot/x"]).returncode == 0
+    assert _run_sh_root(tmp_path, ["--pr", "--branch", "dependabot/x"]).returncode == 1
+
+
+def test_pr_label_mismatch_fails(tmp_path):
+    root = _copy_valid(tmp_path)
+    args = ["--pr", "--branch", BRANCH]
+    bad = _run_sh_root(root, args + ["--pr-labels", "sdd:tier-0,bug"])
+    assert bad.returncode == 1
+    assert "sdd:tier-0" in bad.stderr
+    assert _run_sh_root(root, args + ["--pr-labels", "sdd:tier-2"]).returncode == 0
+    assert _run_sh_root(root, args + ["--pr-labels", "bug"]).returncode == 0
+    assert _run_sh_root(root, args + ["--pr-labels", ""]).returncode == 0
+
+
+def test_feature_override_keeps_branch_tier(tmp_path):
+    root = _copy_valid(tmp_path)
+    result = _run_sh_root(root, ["--branch", "t2/99-x", "--feature", "99-my-feature"])
+    assert result.returncode == 0, result.stderr
+    assert "99-my-feature" in result.stdout
+    (root / "specs" / "99-my-feature" / "traceability.json").write_text("{}")
+    assert _run_sh_root(
+        root, ["--branch", "t2/99-x", "--feature", "99-my-feature"]
+    ).returncode == 1
+
+
+def test_tier0_pr_skips_spec_checks(tmp_path):
+    result = _run_sh_root(tmp_path, ["--pr", "--branch", "t0/5-fix"])
+    assert result.returncode == 0, result.stderr
+
+
+def test_tier1_invalid_freeze_fails(tmp_path):
+    spec = tmp_path / "specs" / "7-small"
+    spec.mkdir(parents=True)
+    (spec / "spec.md").write_text("# Spec\n")
+    (spec / "handoff.md").write_text("# h\n")
+    (spec / "freeze.json").write_text("not json")
+    result = _run_sh_root(tmp_path, ["--branch", "t1/7-small"])
+    assert result.returncode == 1
+    assert "freeze.json" in result.stderr
+
+
+def test_tier1_missing_freeze_only_fails_in_pr(tmp_path):
+    spec = tmp_path / "specs" / "7-small"
+    spec.mkdir(parents=True)
+    (spec / "spec.md").write_text("# Spec\n")
+    assert _run_sh_root(tmp_path, ["--branch", "t1/7-small"]).returncode == 0
+    pr = _run_sh_root(tmp_path, ["--pr", "--branch", "t1/7-small"])
+    assert pr.returncode == 1
+    assert "freeze.json not found" in pr.stderr
 
 
 # ---------------------------------------------------------------------------
@@ -631,22 +534,7 @@ def test_check_issue_snapshot_missing_fails_closed(tmp_path):
 
 
 def test_sh_issue_snapshot_missing_exits_1(tmp_path):
-    (tmp_path / ".sdd").mkdir()
-    (tmp_path / ".sdd" / "state.json").write_text(json.dumps({
-        "tier": 2,
-        "phase": "implement",
-        "feature": "issue-snapshot",
-    }))
-    (tmp_path / ".sdd" / "tasks.json").write_text(json.dumps([
-        {
-            "id": "issue-snapshot",
-            "phase": "implement",
-            "status": "in_progress",
-            "handoff": None,
-            "blocked_reason": None,
-        }
-    ]))
-    feature_dir = tmp_path / "specs" / "issue-snapshot"
+    feature_dir = tmp_path / "specs" / "53-issue-snapshot"
     feature_dir.mkdir(parents=True)
     (feature_dir / "spec.md").write_text(
         "# Spec\n## 受入条件\n- [ ] SAC-1: criterion one\n"
@@ -655,7 +543,7 @@ def test_sh_issue_snapshot_missing_exits_1(tmp_path):
     (feature_dir / "traceability.json").write_text(json.dumps({
         "issue": 53,
         "issue_url": "https://github.com/owner/repo/issues/53",
-        "feature": "issue-snapshot",
+        "feature": "53-issue-snapshot",
         "entries": [{
             "issue_ac": "53-AC1",
             "spec_ac": "SAC-1",
@@ -668,7 +556,8 @@ def test_sh_issue_snapshot_missing_exits_1(tmp_path):
     (tmp_path / "tests" / "test_issue_snapshot.py").write_text("def test_one(): pass")
 
     result = _subprocess.run(
-        ["bash", str(ROOT / "integration" / "ci" / "sdd-validate.sh"), "--root", str(tmp_path)],
+        ["bash", str(ROOT / "integration" / "ci" / "sdd-validate.sh"), "--root", str(tmp_path),
+         "--branch", "t2/53-issue-snapshot"],
         capture_output=True,
         text=True,
     )
@@ -755,24 +644,7 @@ def test_check_evidence_missing_fails_closed(tmp_path):
 
 
 def test_sh_evidence_missing_exits_1(tmp_path):
-    feature = "evidence-validation"
-    (tmp_path / ".sdd").mkdir()
-    (tmp_path / ".sdd" / "state.json").write_text(json.dumps({
-        "tier": 2,
-        "phase": "implement",
-        "feature": feature,
-    }))
-    (tmp_path / ".sdd" / "tasks.json").write_text(json.dumps([
-        {
-            "id": feature,
-            "phase": "implement",
-            "status": "in_progress",
-            "handoff": None,
-            "blocked_reason": None,
-        }
-    ]))
-
-    feature_dir = tmp_path / "specs" / feature
+    feature_dir = tmp_path / "specs" / "54-evidence-validation"
     feature_dir.mkdir(parents=True)
     (feature_dir / "spec.md").write_text(
         "# Spec\n## 受入条件\n- [ ] SAC-1: criterion one\n"
@@ -781,7 +653,7 @@ def test_sh_evidence_missing_exits_1(tmp_path):
     (feature_dir / "traceability.json").write_text(json.dumps({
         "issue": 54,
         "issue_url": "https://github.com/owner/repo/issues/54",
-        "feature": feature,
+        "feature": "54-evidence-validation",
         "entries": [{
             "issue_ac": "54-AC1",
             "spec_ac": "SAC-1",
@@ -803,10 +675,38 @@ def test_sh_evidence_missing_exits_1(tmp_path):
     (tmp_path / "tests" / "test_evidence.py").write_text("def test_one(): pass")
 
     result = _subprocess.run(
-        ["bash", str(ROOT / "integration" / "ci" / "sdd-validate.sh"), "--root", str(tmp_path)],
+        ["bash", str(ROOT / "integration" / "ci" / "sdd-validate.sh"), "--root", str(tmp_path),
+         "--branch", "t2/54-evidence-validation"],
         capture_output=True,
         text=True,
     )
 
     assert result.returncode == 1
     assert "evidence.json not found" in result.stderr
+
+
+def test_pr_star_bullet_unchecked_item_fails(tmp_path):
+    root = _copy_valid(tmp_path)
+    (root / "specs" / "99-my-feature" / "tasks.md").write_text("* [ ] x\n")
+    r = _run_sh_root(root, ["--pr", "--branch", BRANCH])
+    assert r.returncode == 1
+    assert "unchecked" in r.stderr
+
+
+@pytest.mark.parametrize("prefixes", [[""], [1], []])
+def test_empty_or_invalid_tier0_prefixes_fall_back_to_defaults(tmp_path, prefixes):
+    (tmp_path / ".sdd").mkdir()
+    (tmp_path / ".sdd" / "board.json").write_text(
+        json.dumps({"owner": "o", "project": 1, "tier0_branch_prefixes": prefixes})
+    )
+    assert _run_sh_root(tmp_path, ["--pr", "--branch", "feat/x"]).returncode == 1
+    assert _run_sh_root(tmp_path, ["--pr", "--branch", "dependabot/x"]).returncode == 0
+
+
+def test_non_string_tier0_prefix_entries_are_filtered(tmp_path):
+    (tmp_path / ".sdd").mkdir()
+    (tmp_path / ".sdd" / "board.json").write_text(
+        json.dumps({"owner": "o", "project": 1, "tier0_branch_prefixes": [1, "", "bot/"]})
+    )
+    assert _run_sh_root(tmp_path, ["--pr", "--branch", "bot/x"]).returncode == 0
+    assert _run_sh_root(tmp_path, ["--pr", "--branch", "feat/x"]).returncode == 1

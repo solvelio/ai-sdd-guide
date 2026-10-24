@@ -1,0 +1,30 @@
+{
+  "feature": "73-github-projects-board",
+  "commit_sha": "da556374e59e2ed69dc9e7ed7f410aad97da2935",
+  "entries": [
+    {
+      "command_type": "test",
+      "command": "python -m pytest tests/ -q",
+      "result": "268 passed in 8.37s",
+      "test_count": 268
+    },
+    {
+      "command_type": "other",
+      "command": "bash integration/ci/sdd-validate.sh --root . --pr --branch t2/73-github-projects-board --pr-labels sdd:tier-2,enhancement",
+      "result": "sdd-validate: all checks passed for feature '73-github-projects-board'",
+      "test_count": null
+    },
+    {
+      "command_type": "other",
+      "command": "python3 integration/ci/sdd_state.py phase",
+      "result": "verify (freeze.json valid)",
+      "test_count": null
+    },
+    {
+      "command_type": "other",
+      "command": "sdd-reviewer (Claude Code subagent, updated checklist from integration/agents/sdd-reviewer.md)",
+      "result": "PASS: SAC-1..18 met; frozen artifacts unchanged except tasks.md checkboxes; no secrets; no ${{ }} in run blocks",
+      "test_count": null
+    }
+  ]
+}

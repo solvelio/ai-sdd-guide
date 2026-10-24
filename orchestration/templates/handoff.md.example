@@ -20,6 +20,5 @@ If the spec needs changes, stop and escalate to a human.
 ## If the spec is ambiguous or insufficient
 
 1. Stop immediately.
-2. Set `.sdd/tasks.json` status to `"blocked"`.
-3. Fill in `blocked_reason`.
-4. Wait for a human to escalate to Claude before resuming.
+2. Comment the reason on the Issue.
+3. Wait for a human to escalate to Claude before resuming.

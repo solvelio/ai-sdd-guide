@@ -11,6 +11,7 @@
 - [ ] AC2 → test: ...
 
 ## 完了の定義
-- [ ] 全AC対応テストが green
-- [ ] CI green
-- [ ] sdd-reviewer 合格
+- 全AC対応テストが green
+- CI green
+- sdd-reviewer 合格
+（上のチェック欄はすべて `[x]` にしてから verify へ進む。この「完了の定義」はチェック欄にしない）

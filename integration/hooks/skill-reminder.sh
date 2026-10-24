@@ -1,26 +1,18 @@
 #!/usr/bin/env bash
 # SDD skill reminder hook for Claude Code. Non-blocking nudge — reminds Claude which superpowers skill belongs to the current SDD phase.
 # Tier 0 is skipped (no design overhead). Tier 1 reminds only for implement/verify. Tier 2 reminds across all design phases.
-# Prefers jq; falls back to python3.
+# Tier and phase come from `sdd_state.py` (branch name t<Tier>/<Issue>-<name> + specs/<feature>/ files).
 set -euo pipefail
-
-json_get() {
-  local file="$1" key="$2"
-  if command -v jq >/dev/null 2>&1; then
-    jq -r ".${key} // empty" "$file" 2>/dev/null || true
-  else
-    python3 -c "import json; d=json.load(open('$file')); print(d.get('$key') or '')" 2>/dev/null || true
-  fi
-}
 
 # Drain stdin (tool input); we don't read it.
 cat >/dev/null
 
-state=".sdd/state.json"
-[ -f "$state" ] || exit 0
-
-tier="$(json_get "$state" "tier")"
-phase="$(json_get "$state" "phase")"
+sdd_state="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../ci/sdd_state.py"
+command -v git >/dev/null 2>&1 && command -v python3 >/dev/null 2>&1 || exit 0
+root="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
+branch_json="$(python3 "$sdd_state" branch --root "$root" 2>/dev/null)" || exit 0
+phase="$(python3 "$sdd_state" phase --root "$root" 2>/dev/null)" || exit 0
+tier="$(printf '%s' "$branch_json" | python3 -c "import json,sys; print(json.load(sys.stdin).get('tier', ''))" 2>/dev/null)" || exit 0
 
 # Tier 0: trivial work, no skill required.
 [ "$tier" = "0" ] && exit 0

@@ -1,0 +1,12 @@
+{
+  "feature": "99-my-feature",
+  "commit_sha": "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+  "entries": [
+    {
+      "command_type": "test",
+      "command": "pytest tests/test_my_feature.py",
+      "result": "2 passed",
+      "test_count": 2
+    }
+  ]
+}

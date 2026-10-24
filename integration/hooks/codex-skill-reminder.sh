@@ -1,29 +1,22 @@
 #!/usr/bin/env bash
 # SDD UserPromptSubmit reminder hook for Codex. Non-blocking context injection.
-# Prefers jq; falls back to python3.
+# Tier and phase come from `sdd_state.py` (branch name t<Tier>/<Issue>-<name> + specs/<feature>/ files).
+# Prefers jq for JSON output; falls back to python3.
 set -euo pipefail
 
-json_get() {
-  local file="$1" key="$2"
-  if command -v jq >/dev/null 2>&1; then
-    jq -r ".${key} // empty" "$file" 2>/dev/null || true
-  else
-    python3 -c "import json; d=json.load(open('$file')); print(d.get('$key') or '')" 2>/dev/null || true
-  fi
-}
-
 input="$(cat)"
-root="$(git rev-parse --show-toplevel 2>/dev/null || printf '%s' "${PWD}")"
-state="$root/.sdd/state.json"
-[ -f "$state" ] || exit 0
+command -v git >/dev/null 2>&1 && command -v python3 >/dev/null 2>&1 || exit 0
 
 if command -v jq >/dev/null 2>&1; then
   event="$(printf '%s' "$input" | jq -r '.hook_event_name // "UserPromptSubmit"' 2>/dev/null || printf 'UserPromptSubmit')"
 else
   event="$(printf '%s' "$input" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('hook_event_name') or 'UserPromptSubmit')" 2>/dev/null || printf 'UserPromptSubmit')"
 fi
-tier="$(json_get "$state" "tier")"
-phase="$(json_get "$state" "phase")"
+sdd_state="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../ci/sdd_state.py"
+root="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
+branch_json="$(python3 "$sdd_state" branch --root "$root" 2>/dev/null)" || exit 0
+phase="$(python3 "$sdd_state" phase --root "$root" 2>/dev/null)" || exit 0
+tier="$(printf '%s' "$branch_json" | python3 -c "import json,sys; print(json.load(sys.stdin).get('tier', ''))" 2>/dev/null)" || exit 0
 
 [ "$tier" = "0" ] && exit 0
 [ -z "$tier" ] || [ -z "$phase" ] && exit 0

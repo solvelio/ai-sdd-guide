@@ -6,6 +6,6 @@
 
 **RED確認コマンド:**
 ```bash
-bash integration/ci/sdd-validate.sh --root tests/fixtures/fixture-orphan-spec-ac
+bash integration/ci/sdd-validate.sh --root tests/fixtures/fixture-orphan-spec-ac --branch t2/99-my-feature
 # → exit 1, stderr に "not found in spec.md" が含まれる
 ```

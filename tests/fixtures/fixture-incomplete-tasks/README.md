@@ -1,12 +1,12 @@
 ## fixture-incomplete-tasks
 
-**再現パターン:** `phase=verify` のときに `tasks.md` に未完了 checkbox が残っている。
+**再現パターン:** `--pr` で検査するとき `tasks.md` に未完了 checkbox が残っている。
 
 **対応チェック:** Check 5 — `check_tasks_md_consistency`
 
 **RED確認コマンド:**
 ```bash
-bash integration/ci/sdd-validate.sh --root tests/fixtures/fixture-incomplete-tasks
+bash integration/ci/sdd-validate.sh --root tests/fixtures/fixture-incomplete-tasks --pr --branch t2/99-my-feature
 # → exit 1, stderr に "unchecked item" が含まれる
 ```
 

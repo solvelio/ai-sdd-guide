@@ -6,6 +6,6 @@
 
 **RED確認コマンド:**
 ```bash
-bash integration/ci/sdd-validate.sh --root tests/fixtures/fixture-stale-snapshot-hash
+bash integration/ci/sdd-validate.sh --root tests/fixtures/fixture-stale-snapshot-hash --branch t2/99-my-feature
 # → exit 1, stderr に "body_hash does not match" が含まれる
 ```

@@ -6,6 +6,6 @@
 
 **RED確認コマンド:**
 ```bash
-bash integration/ci/sdd-validate.sh --root tests/fixtures/fixture-weakened-ac
+bash integration/ci/sdd-validate.sh --root tests/fixtures/fixture-weakened-ac --branch t2/99-my-feature
 # → exit 1, stderr に "snapshot AC not tracked in traceability" が含まれる
 ```

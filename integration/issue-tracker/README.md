@@ -4,8 +4,10 @@ Per-platform setup for the SDD intake flow. The flow itself is identical everywh
 the label, dependency-link, and PR-link mechanisms differ. See `rules/issue-intake.md`
 (agent rule) and `docs/04-issue-tracker.md` (human guide).
 
-**Status is always tracked in `.sdd/tasks.json` (the SDD kanban), not in platform boards.**
-Boards are optional mirrors only.
+**Status is derived from the branch name and `specs/`; the board only displays it.** The GitHub
+Projects board is implemented (`orchestration/tools/sdd-board.sh`, `integration/ci/sdd-board.yml`,
+config `.sdd/board.json`, Actions secret `SDD_PROJECT_TOKEN`). GitLab and Azure DevOps boards are
+tracked in #71 and #72; Bitbucket is out of scope (its Issues are being sunset).
 
 ## Branch protection (all platforms)
 
@@ -86,4 +88,4 @@ bash vendor/ai-sdd-guide/integration/issue-tracker/labels.sh owner/repo
 ---
 
 After labels exist, the agent follows `rules/issue-intake.md`: read the labeled issue,
-register it in `.sdd/tasks.json`, run the Tier-appropriate SDD flow, and link the PR back.
+create the `t<Tier>/<Issue番号>-<名前>` branch, run the Tier-appropriate SDD flow, and link the PR back.

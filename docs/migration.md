@@ -106,6 +106,8 @@ verify フェーズで `specs/<feature>/evidence.json` を作成する。
 
 ## 手順 4: state.json / tasks.json の schema 準拠確認（#52）
 
+> v3 で置き換え済み（`state.json` / `tasks.json` はもう使わない。下の「v3」を参照）。
+
 スキーマ: `orchestration/schema/state.schema.json` / `orchestration/schema/tasks.schema.json`
 
 `.sdd/state.json` の形式:
@@ -136,6 +138,8 @@ bash vendor/ai-sdd-guide/integration/ci/sdd-validate.sh --root .
 
 ## 手順 5: CI への sdd-validate 組み込み（#52）
 
+> v3 で置き換え済み（`update.sh` が `sdd-check.yml` を配る。下の「v3」を参照）。
+
 `.github/workflows/` に `integration/ci/sdd-check.yml` をコピーし、`Tests` ステップのコマンドをこのプロジェクトのテストコマンドに差し替える。
 
 ```yaml
@@ -160,6 +164,8 @@ guide を private な fork や社内ミラーとして submodule にしている
 
 ## 手順 6: hook への sdd-validate 組み込み（#52）
 
+> v3 で置き換え済み。hook をコピーしてはいけない。`vendor/ai-sdd-guide/integration/hooks/...` を直接参照し、コピー済みの hook は削除する（下の「v3」を参照）。
+
 `integration/hooks/sdd-validate-hook.sh` をコピーして hook に登録する。
 
 **Claude Code の場合** (`.claude/settings.json`):
@@ -182,6 +188,8 @@ guide を private な fork や社内ミラーとして submodule にしている
 ---
 
 ## 手順 7: sdd-reviewer prompt の更新（#48）
+
+> v3 で置き換え済み（reviewer は `freeze.json` と branch 名から状態を読む。下の「v3」を参照）。
 
 `integration/prompts/sdd-reviewer-prompt.md` を consumer repository の reviewer 設定に反映する。
 
@@ -267,3 +275,26 @@ feature ごとに以下を確認する:
 - [ ] `integration/hooks/sdd-validate-hook.sh` — hook
 - [ ] `integration/prompts/sdd-reviewer-prompt.md` — reviewer prompt
 - [ ] `rules/` — core / workflow / orchestration / conventions / issue-intake の freeze/verify 条件
+
+---
+
+## v3: GitHub Projects とファイルからの割り出し
+
+進捗の管理を `.sdd/state.json` / `.sdd/tasks.json` から、GitHub Projects のボードと「ブランチ名・`specs/` のファイル」からの割り出しに切り替える。一括で切り替える（`state.json` / `tasks.json` へのフォールバックはない）。仕組みは [README](../README.md) と各 docs、用語と規則は `specs/73-github-projects-board/spec.md` の「用語と規則」を参照。
+
+consumer repo では次の順に行う。
+
+1. **作業中のブランチを終わらせるか、改名する。** 仕掛かりのブランチは merge して終わらせるか、`git branch -m t<Tier>/<Issue番号>-<名前>`（例: `git branch -m t2/42-add-login`）で新しい名前にする。旧名のままだと guard が通らない。
+   - 改名だけでは足りない。進行中の feature は次も行う: `git mv specs/<旧名> specs/<Issue番号>-<名前>`、`issue-snapshot.json` の Issue 番号がブランチの Issue 番号と一致していることの確認（Tier 2）、人間の承認、`sdd-freeze.sh` の実行（`freeze.json` を作る）、`handoff.md` がなければ追加。
+2. **hook は vendor のパスから参照する。** `.claude/settings.json` などの hook は `vendor/ai-sdd-guide/integration/hooks/...` を直接指す（`integration/settings.json.example` 参照）。旧手順でコピーした hook は削除する。コピーした hook は `../ci/sdd_state.py` を見つけられず、編集がすべて拒否される。
+3. **submodule を上げる。** `git submodule update --remote vendor/ai-sdd-guide`（または目的の revision を checkout）して、親 repo でコミットする。
+4. **`update.sh` を実行する。** `bash vendor/ai-sdd-guide/integration/update.sh`。`.github/workflows/sdd-check.yml` と `.github/workflows/sdd-board.yml` が毎回上書きされる。`.sdd/board.json` は触らない。
+5. **`.sdd/state.json` と `.sdd/tasks.json` を消す。** もう読まれない。あわせて、kanban を使っていた場合は `.github/workflows/kanban-pages.yml` を消し、GitHub Pages を無効にする。
+6. **`SDD_PROJECT_TOKEN` を登録する。** `project` スコープの classic PAT を作り、repo secret `SDD_PROJECT_TOKEN` に登録する（`sdd-board.yml` が使う）。
+7. **`sdd-board.sh init` を実行する。** `bash vendor/ai-sdd-guide/orchestration/tools/sdd-board.sh init [--owner OWNER] [--title TITLE]`。Project と Phase フィールドを作り、`.sdd/board.json`（`owner`・`project`・任意で `tier0_branch_prefixes`）を書き、open な Issue をボードに取り込む。`.sdd/board.json` はコミットする。
+   - ボードは 1 アカウントに 1 つ。アカウントにすでに SDD のボードがあるときは、`init` の前にその `owner` / `project` を `.sdd/board.json` に書いておく（`{"owner": "...", "project": 3}`）。そうすれば `init` は新しい Project を作らず、Phase フィールドの確認と Issue の取り込みだけを行う。書かずに実行すると 2 つ目の Project ができる。
+   - ローカルの `gh` には `project` スコープが要る: `gh auth refresh -s project`。
+8. **リポジトリごとのビューを作る。** Projects の画面でビューを足し、絞り込みに `repo:owner/name` を指定する。
+9. **以降、新しい作業にはすべて Issue が要る。** Tier 0 も例外ではない（`t0/<Issue番号>-<名前>`）。dependabot / renovate などの bot ブランチは `tier0_branch_prefixes` で除外される。
+
+既存の完了済み `specs/<feature>/` ディレクトリは改名しない。新しい仕組みの feature 名は `<Issue番号>-<名前>` だが、過去分はそのまま残す。

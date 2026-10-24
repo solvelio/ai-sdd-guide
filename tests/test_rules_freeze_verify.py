@@ -67,10 +67,16 @@ def test_workflow_verify_sdd_reviewer_items():
     assert "sdd-reviewer must also verify" in content
     assert "tracked to a spec AC" in content
     assert "followup_issue URL" in content
-    assert "`feature` matches the spec directory" in content
+    assert "branch name" in content
     assert "schema-valid" in content
     assert "All task checkboxes in tasks.md are complete" in content
     assert "runnable test, not a manual/visual check" in content
+
+
+def test_workflow_freeze_uses_freeze_json():
+    content = read("rules/workflow.md")
+    assert "sdd-freeze.sh" in content
+    assert "freeze.json" in content
 
 
 # --- orchestration.md ---
@@ -90,6 +96,12 @@ def test_orchestration_issue_diff_summary_and_independent_review():
     assert "frozen spec" in content
     assert "Independent Reviewer Requirement" in content
     assert "MUST invoke the `sdd-reviewer` subagent" in content
+
+
+def test_orchestration_stop_runs_board_sync():
+    content = read("orchestration/rules/orchestration.md")
+    assert "sdd-board.sh sync" in content
+    assert "display kanban" not in content.lower()
 
 
 # --- conventions.md ---
@@ -126,6 +138,25 @@ def test_sdd_reviewer_prompt_bootstrap_and_evidence_count():
         assert "separate exemption-range findings from non-exempt findings" in content
         assert "Evidence Test Count" in content
         assert "actual test runner execution counts" in content
+
+
+def test_sdd_reviewer_checks_branch_and_freeze():
+    for path in [
+        "integration/prompts/sdd-reviewer-prompt.md",
+        "integration/agents/sdd-reviewer.md",
+    ]:
+        content = read(path)
+        assert "freeze.json" in content
+        assert "t<Tier>/<Issue番号>-<名前>" in content
+        assert "state.json" not in content
+        assert "tasks.json" not in content
+
+
+def test_tasks_template_completion_has_no_checkboxes():
+    content = read("templates/tasks.md")
+    assert "## 完了の定義" in content
+    tail = content.split("## 完了の定義", 1)[1]
+    assert "- [ ]" not in tail
 
 
 # --- issue-48 SDD artifacts ---

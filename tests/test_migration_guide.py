@@ -44,3 +44,10 @@ def test_migration_guide_no_retroactive_policy():
 def test_migration_guide_no_partial_migration():
     text = GUIDE.read_text()
     assert "部分移行" in text, "No-partial-migration policy not stated in docs/migration.md"
+
+
+def test_migration_guide_projects_board_section():
+    text = (Path(__file__).resolve().parent.parent / "docs" / "migration.md").read_text()
+    for s in ["state.json", "tasks.json", ".sdd/board.json", "SDD_PROJECT_TOKEN",
+              "sdd-board.yml", "sdd-board.sh init", "git branch -m", "repo:"]:
+        assert s in text, s
