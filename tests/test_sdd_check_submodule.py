@@ -47,15 +47,33 @@ def test_sdd_job_checkout_fetches_submodules():
 def test_sdd_validate_step_runs_in_consumer_layout(tmp_path):
     (tmp_path / "vendor").mkdir()
     (tmp_path / "vendor" / "ai-sdd-guide").symlink_to(ROOT)
-    (tmp_path / ".sdd").mkdir()
-    (tmp_path / ".sdd" / "state.json").write_text(
-        json.dumps({"tier": 0, "phase": "done", "note": "no active feature"})
-    )
     script = _step_run_script(WORKFLOW.read_text(), "Run sdd-validate")
+    # Emulate GitHub's ${{ }} interpolation for a Tier 0 PR.
+    values = iter(["t0/1-x", ""])
+    script = re.sub(r"\$\{\{.*?\}\}", lambda _m: next(values), script)
     result = subprocess.run(
         ["bash", "-e", "-c", script], cwd=tmp_path, capture_output=True, text=True
     )
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_no_state_reset_gate():
+    text = WORKFLOW.read_text()
+    assert "State reset gate" not in text
+    assert "state.json" not in text
+
+
+def test_no_orchestration_job():
+    text = WORKFLOW.read_text()
+    assert not re.search(r"^  orchestration:", text, re.M)
+    assert "tasks.json" not in text
+    assert "kanban" not in text.lower()
+
+
+def test_validate_step_passes_pr_context():
+    run = _step_run_script(WORKFLOW.read_text(), "Run sdd-validate")
+    assert "--pr" in run and "--pr-labels" in run
+    assert "GITHUB_HEAD_REF" in run or "github.head_ref" in run
 
 
 def test_migration_guide_uses_submodule_validator_path():
