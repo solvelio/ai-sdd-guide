@@ -458,3 +458,145 @@ def test_sync_from_subdirectory_finds_board_json(env):
     assert r.returncode == 0, r.stderr
     assert "warning" not in r.stderr
     assert len(env.sub("project", "item-edit")) == 1
+
+
+# --- auth-mode (78-github-app-token) ---
+
+def write_board(env, data):
+    (env.root / ".sdd").mkdir(exist_ok=True)
+    (env.root / ".sdd" / "board.json").write_text(json.dumps(data))
+
+
+def auth(env, key, pat):
+    r = env.run("auth-mode", "--has-app-key", key, "--has-pat", pat)
+    assert env.calls() == []
+    return r
+
+
+def test_auth_mode_app_when_app_id_and_key(env):
+    write_board(env, {"owner": "o", "project": 1, "app_id": 123})
+    r = auth(env, "true", "false")
+    assert r.returncode == 0, r.stderr
+    assert r.stdout.splitlines() == ["mode=app", "app_id=123", "owner=o"]
+
+
+def test_auth_mode_app_preferred_over_pat(env):
+    write_board(env, {"owner": "o", "project": 1, "app_id": 123})
+    r = auth(env, "true", "true")
+    assert r.returncode == 0
+    assert "mode=app" in r.stdout.splitlines()
+
+
+def test_auth_mode_key_without_app_id_is_error(env):
+    write_board(env, {"owner": "o", "project": 1})
+    r = auth(env, "true", "false")
+    assert r.returncode == 1
+    assert "mode=error" in r.stdout
+    assert "::error::" in r.stderr
+
+
+def test_auth_mode_pat_without_app_id(env):
+    write_board(env, {"owner": "o", "project": 1})
+    r = auth(env, "false", "true")
+    assert r.returncode == 0
+    assert "mode=pat" in r.stdout.splitlines()
+
+
+def test_auth_mode_pat_when_app_id_but_no_key(env):
+    write_board(env, {"owner": "o", "project": 1, "app_id": 123})
+    r = auth(env, "false", "true")
+    assert r.returncode == 0
+    assert "mode=pat" in r.stdout.splitlines()
+
+
+def test_auth_mode_app_id_without_key_and_pat_is_none(env):
+    write_board(env, {"owner": "o", "project": 1, "app_id": 123})
+    r = auth(env, "false", "false")
+    assert r.returncode == 0
+    assert "mode=none" in r.stdout.splitlines()
+    assert r.stderr.startswith("::warning::")
+
+
+def test_auth_mode_none_without_anything(env):
+    write_board(env, {"owner": "o", "project": 1})
+    r = auth(env, "false", "false")
+    assert r.returncode == 0
+    assert "mode=none" in r.stdout.splitlines()
+
+
+def test_auth_mode_without_board_json_is_none(env):
+    r = auth(env, "true", "false")
+    assert r.returncode == 0
+    assert r.stdout.splitlines() == ["mode=none", "app_id=", "owner="]
+    assert "::warning::" in r.stderr
+
+
+@pytest.mark.parametrize("bad", ["123", True])
+def test_auth_mode_invalid_app_id_is_error(env, bad):
+    write_board(env, {"owner": "o", "project": 1, "app_id": bad})
+    r = auth(env, "true", "false")
+    assert r.returncode == 1
+    assert "mode=error" in r.stdout
+    assert "::error::" in r.stderr
+
+
+def test_load_board_accepts_int_app_id(env):
+    write_board(env, {"owner": "o", "project": 1, "app_id": 5})
+    import sdd_board
+    assert sdd_board.load_board(env.root)["app_id"] == 5
+
+
+def test_load_board_rejects_bool_app_id(env):
+    write_board(env, {"owner": "o", "project": 1, "app_id": True})
+    import sdd_board
+    with pytest.raises(sdd_board.BoardError):
+        sdd_board.load_board(env.root)
+
+
+def test_init_preserves_existing_keys(env):
+    write_board(env, {"owner": "o", "project": 1, "app_id": 5,
+                      "tier0_branch_prefixes": ["bot/"]})
+    table = base_responses()
+    table["project field-list 1 --owner o"] = table["project field-list 5 --owner acme"]
+    table["project item-list 1 --owner o"] = J({"items": []})
+    table["issue list"] = J([])
+    env.respond(table)
+    r = env.run("init")
+    assert r.returncode == 0, r.stderr
+    data = json.loads((env.root / ".sdd" / "board.json").read_text())
+    assert data["app_id"] == 5 and data["tier0_branch_prefixes"] == ["bot/"]
+    assert env.sub("project", "create") == []
+
+
+HINT = "トークンの権限が足りない可能性があります"
+
+
+def sync_with_stderr(env, stderr):
+    env.git_branch("t2/7-x")
+    env.freeze_t2("7-x")
+    env.board()
+    table = base_responses(items=[item("IT7", 7)])
+    table["project view 5 --owner acme"] = {"stdout": "", "code": 1, "stderr": stderr}
+    env.respond(table)
+    return env.run("sync")
+
+
+def test_scope_hint_on_missing_scopes(env):
+    r = sync_with_stderr(env, "error: missing required scopes [read:org]")
+    assert r.returncode == 0
+    assert HINT in r.stderr
+    assert "read:org" not in r.stderr
+
+
+def test_scope_hint_on_integration_forbidden(env):
+    r = sync_with_stderr(env, "Resource not accessible by integration")
+    assert r.returncode == 0
+    assert HINT in r.stderr
+    assert "accessible by integration" not in r.stderr
+
+
+def test_no_scope_hint_on_other_failure(env):
+    r = sync_with_stderr(env, "something else")
+    assert r.returncode == 0
+    assert "warning" in r.stderr
+    assert HINT not in r.stderr
