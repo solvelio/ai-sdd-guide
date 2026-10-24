@@ -1,10 +1,15 @@
 import json
 import os
 import subprocess
+import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
-
 ROOT = Path(__file__).parents[1]
+sys.path.insert(0, str(ROOT / "integration" / "ci"))
+from sdd_state import create_freeze  # noqa: E402
+
+
 HOOK = ROOT / "integration" / "hooks" / "codex-sdd-guard.sh"
 GIT_ENV = {
     **os.environ,
@@ -19,25 +24,34 @@ def _run(command, cwd):
     subprocess.run(command, cwd=cwd, check=True, text=True, env=GIT_ENV)
 
 
-def _make_repo(tmp_path):
+def _make_repo(tmp_path, branch="t0/1-feature", detach=False):
     repo = tmp_path / "repo"
     repo.mkdir()
     _run(["git", "init"], repo)
     _run(["git", "config", "user.email", "test@example.invalid"], repo)
     _run(["git", "config", "user.name", "Test User"], repo)
 
-    (repo / ".sdd").mkdir()
-    (repo / ".sdd" / "state.json").write_text(
-        json.dumps({"tier": 1, "phase": "implement"}) + "\n"
-    )
     (repo / "src").mkdir()
     (repo / "src" / "app.py").write_text("print('hello')\n")
     _run(["git", "add", "."], repo)
     _run(["git", "commit", "-m", "init"], repo)
 
     worktree = repo / ".worktrees" / "feature"
-    _run(["git", "worktree", "add", str(worktree), "-b", "feature"], repo)
+    if detach:
+        _run(["git", "worktree", "add", "--detach", str(worktree)], repo)
+    else:
+        _run(["git", "worktree", "add", str(worktree), "-b", branch], repo)
     return repo, worktree
+
+
+def _freeze(worktree, tier=2, feature="1-feature"):
+    spec = worktree / "specs" / feature
+    spec.mkdir(parents=True)
+    for name in ("spec.md", "plan.md", "tasks.md"):
+        (spec / name).write_text("# %s\n- [ ] T1\n" % name)
+    (spec / "traceability.json").write_text("{}\n")
+    create_freeze(spec, tier, datetime(2026, 1, 1, tzinfo=timezone.utc))
+    return spec
 
 
 def _guard(cwd, payload):
@@ -183,40 +197,68 @@ def test_bash_fd_dup_redirect_is_not_treated_as_write(tmp_path):
     assert result.stdout == ""
 
 
-def _set_state(root, data):
-    (root / ".sdd" / "state.json").write_text(json.dumps(data) + "\n")
-
-
-def test_tier0_source_edit_in_linked_worktree_is_allowed(tmp_path):
-    repo, worktree = _make_repo(tmp_path)
-    _set_state(worktree, {"tier": 0, "phase": "design"})
+def _wt_patch(worktree):
     patch = f"""*** Begin Patch
 *** Update File: {worktree / 'src' / 'app.py'}
 @@
 -print('hello')
-+print('tier0')
++print('x')
 *** End Patch
 """
+    return patch
 
-    result = _guard(repo, {"tool_name": "apply_patch", "tool_input": {"patch": patch}})
+
+def test_tier0_source_edit_in_linked_worktree_is_allowed(tmp_path):
+    repo, worktree = _make_repo(tmp_path, "t0/1-feature")
+
+    result = _guard(repo, {"tool_name": "apply_patch", "tool_input": {"patch": _wt_patch(worktree)}})
 
     assert result.stdout == ""
 
 
 def test_unclassified_tier_in_linked_worktree_is_denied(tmp_path):
-    repo, worktree = _make_repo(tmp_path)
-    _set_state(worktree, {"phase": "implement"})
-    patch = f"""*** Begin Patch
-*** Update File: {worktree / 'src' / 'app.py'}
-@@
--print('hello')
-+print('no tier')
-*** End Patch
-"""
+    repo, worktree = _make_repo(tmp_path, "feature")
 
-    result = _guard(repo, {"tool_name": "apply_patch", "tool_input": {"patch": patch}})
+    result = _guard(repo, {"tool_name": "apply_patch", "tool_input": {"patch": _wt_patch(worktree)}})
 
-    assert "Tier is not classified" in _deny_reason(result)
+    assert "t<Tier>/<Issue番号>-<名前>" in _deny_reason(result)
+
+
+def test_tier2_branch_with_valid_freeze_is_allowed(tmp_path):
+    repo, worktree = _make_repo(tmp_path, "t2/1-feature")
+    _freeze(worktree)
+
+    result = _guard(repo, {"tool_name": "apply_patch", "tool_input": {"patch": _wt_patch(worktree)}})
+
+    assert result.stdout == ""
+
+
+def test_tier2_branch_without_freeze_is_denied(tmp_path):
+    repo, worktree = _make_repo(tmp_path, "t2/1-feature")
+
+    reason = _deny_reason(
+        _guard(repo, {"tool_name": "apply_patch", "tool_input": {"patch": _wt_patch(worktree)}})
+    )
+
+    assert "freeze.json" in reason
+    assert "sdd-freeze.sh" in reason
+
+
+def test_allow_main_worktree_env_bypasses_guard(tmp_path):
+    repo, _ = _make_repo(tmp_path)
+    patch = _wt_patch(repo)
+
+    result = subprocess.run(
+        ["bash", str(HOOK)],
+        cwd=repo,
+        input=json.dumps({"tool_name": "apply_patch", "tool_input": {"patch": patch}}),
+        text=True,
+        capture_output=True,
+        check=True,
+        env={**GIT_ENV, "SDD_ALLOW_MAIN_WORKTREE": "1"},
+    )
+
+    assert result.stdout == ""
 
 
 def test_relative_path_without_workdir_falls_back_to_invocation_root(tmp_path):

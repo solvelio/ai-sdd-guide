@@ -1,17 +1,9 @@
 #!/usr/bin/env bash
 # SDD PreToolUse guard for Codex. A nudge, not a wall — CI is the real enforcement.
-# Blocks detected source edits before a spec is frozen, unless the task is Tier 0.
+# Blocks detected source edits unless the branch is Tier 0 or its spec is frozen (freeze.json).
+# The decision lives in integration/ci/sdd_state.py (branch name t<Tier>/<Issue>-<name>).
 # Prefers jq; falls back to python3.
 set -euo pipefail
-
-json_get() {
-  local file="$1" key="$2"
-  if command -v jq >/dev/null 2>&1; then
-    jq -r ".${key} // empty" "$file" 2>/dev/null || true
-  else
-    python3 -c "import json; d=json.load(open('$file')); print(d.get('$key') or '')" 2>/dev/null || true
-  fi
-}
 
 input="$(cat)"
 invocation_root="$(git rev-parse --show-toplevel 2>/dev/null || printf '%s' "${PWD}")"
@@ -142,7 +134,7 @@ EOF
 
 if [ -z "$non_exempt" ]; then
   if [ -z "$paths" ] && [ "$tool_name" = "Bash" ] && looks_like_write_bash; then
-    print_context "SDD reminder: this Bash command appears to write files. If it edits source, ensure .sdd/state.json has tier set and phase is implement or verify."
+    print_context "SDD reminder: this Bash command appears to write files. If it edits source, ensure the branch is t<Tier>/<Issue番号>-<名前> and the spec is frozen (orchestration/tools/sdd-freeze.sh)."
   fi
   exit 0
 fi
@@ -176,26 +168,21 @@ $roots
 EOF
 fi
 
+# Maintenance escape hatch: skip the branch/freeze decision as well.
+[ "${SDD_ALLOW_MAIN_WORKTREE:-}" = "1" ] && exit 0
+
+if ! command -v python3 >/dev/null 2>&1; then
+  deny "SDD: python3 not found, cannot check the frozen spec state. Install python3. Detected source path(s): $(join_paths "$non_exempt")"
+  exit 0
+fi
+
+sdd_state="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../ci/sdd_state.py"
 while IFS= read -r check_root; do
   [ -n "$check_root" ] || continue
-  state="$check_root/.sdd/state.json"
-  tier=""
-  phase=""
-  if [ -f "$state" ]; then
-    tier="$(json_get "$state" "tier")"
-    phase="$(json_get "$state" "phase")"
-  fi
-
-  if [ -z "$tier" ]; then
-    deny "SDD: Tier is not classified. Before editing source files, set .sdd/state.json tier to 0, 1, or 2. Detected source path(s): $(join_paths "$non_exempt")"
+  if ! reason="$(python3 "$sdd_state" guard --root "$check_root" 2>&1)"; then
+    deny "SDD: source edits are blocked. ${reason} Detected source path(s): $(join_paths "$non_exempt")"
     exit 0
   fi
-
-  [ "$tier" = "0" ] && continue
-  case "$phase" in implement|verify) continue ;; esac
-
-  deny "SDD: source edits are blocked before the spec is frozen. Set .sdd/state.json phase to implement or verify, or declare Tier 0 with justification. Detected source path(s): $(join_paths "$non_exempt")"
-  exit 0
 done <<EOF
 $roots
 EOF
