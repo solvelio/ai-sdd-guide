@@ -683,3 +683,30 @@ def test_sh_evidence_missing_exits_1(tmp_path):
 
     assert result.returncode == 1
     assert "evidence.json not found" in result.stderr
+
+
+def test_pr_star_bullet_unchecked_item_fails(tmp_path):
+    root = _copy_valid(tmp_path)
+    (root / "specs" / "99-my-feature" / "tasks.md").write_text("* [ ] x\n")
+    r = _run_sh_root(root, ["--pr", "--branch", BRANCH])
+    assert r.returncode == 1
+    assert "unchecked" in r.stderr
+
+
+@pytest.mark.parametrize("prefixes", [[""], [1], []])
+def test_empty_or_invalid_tier0_prefixes_fall_back_to_defaults(tmp_path, prefixes):
+    (tmp_path / ".sdd").mkdir()
+    (tmp_path / ".sdd" / "board.json").write_text(
+        json.dumps({"owner": "o", "project": 1, "tier0_branch_prefixes": prefixes})
+    )
+    assert _run_sh_root(tmp_path, ["--pr", "--branch", "feat/x"]).returncode == 1
+    assert _run_sh_root(tmp_path, ["--pr", "--branch", "dependabot/x"]).returncode == 0
+
+
+def test_non_string_tier0_prefix_entries_are_filtered(tmp_path):
+    (tmp_path / ".sdd").mkdir()
+    (tmp_path / ".sdd" / "board.json").write_text(
+        json.dumps({"owner": "o", "project": 1, "tier0_branch_prefixes": [1, "", "bot/"]})
+    )
+    assert _run_sh_root(tmp_path, ["--pr", "--branch", "bot/x"]).returncode == 0
+    assert _run_sh_root(tmp_path, ["--pr", "--branch", "feat/x"]).returncode == 1

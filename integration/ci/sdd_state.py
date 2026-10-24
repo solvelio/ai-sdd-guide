@@ -23,7 +23,7 @@ _CHECKED_RE = re.compile(r"^(\s*[-*]\s+\[)[xX](\])", re.MULTILINE)
 _CHECKBOX_RE = re.compile(r"^\s*[-*]\s+\[([ xX])\]", re.MULTILINE)
 
 BRANCH_SHAPE = "t<Tier>/<Issue番号>-<名前>"
-FREEZE_TOOL = "orchestration/tools/sdd-freeze.sh"
+FREEZE_TOOL = "vendor/ai-sdd-guide/orchestration/tools/sdd-freeze.sh"
 
 
 @dataclass(frozen=True)
@@ -129,8 +129,13 @@ def freeze_status(spec_dir: Path, tier: int) -> Tuple[str, List[str]]:
     return ("invalid", reasons) if reasons else ("valid", [])
 
 
+def checkbox_states(text: str) -> List[str]:
+    """Return the check marks (' ', 'x', 'X') of every task checkbox in tasks.md text."""
+    return _CHECKBOX_RE.findall(text)
+
+
 def _tasks_all_checked(path: Path) -> bool:
-    boxes = _CHECKBOX_RE.findall(path.read_text(encoding="utf-8"))
+    boxes = checkbox_states(path.read_text(encoding="utf-8"))
     return bool(boxes) and all(b in "xX" for b in boxes)
 
 
@@ -155,7 +160,7 @@ def derive_phase(root: Path, info: BranchInfo) -> str:
     return "brainstorm"
 
 
-def _root_from(arg: Optional[str]) -> Path:
+def root_from(arg: Optional[str]) -> Path:
     if arg:
         return Path(arg)
     out = _git(Path.cwd(), ["rev-parse", "--show-toplevel"])
@@ -169,7 +174,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--branch")
     args = ap.parse_args(argv)
 
-    root = _root_from(args.root)
+    root = root_from(args.root)
     branch = args.branch if args.branch is not None else current_branch(root)
     info = parse_branch(branch)
 

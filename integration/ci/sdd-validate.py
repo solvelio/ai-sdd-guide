@@ -64,7 +64,7 @@ def check_tasks_md_consistency(root: Path, feature: str) -> list[str]:
         return [f"tasks.md not found: {tasks_md}"]
     errors = []
     for i, line in enumerate(tasks_md.read_text().splitlines(), 1):
-        if re.match(r"\s*-\s*\[ \]", line):
+        if sdd_state.checkbox_states(line) == [" "]:
             errors.append(f"tasks.md line {i}: unchecked item: {line.strip()}")
     return errors
 
@@ -304,8 +304,10 @@ def _tier0_prefixes(root: Path) -> List[str]:
     try:
         data = json.loads((root / ".sdd" / "board.json").read_text(encoding="utf-8"))
         prefixes = data.get("tier0_branch_prefixes")
-        if isinstance(prefixes, list) and all(isinstance(p, str) for p in prefixes):
-            return prefixes
+        if isinstance(prefixes, list):
+            valid = [p for p in prefixes if isinstance(p, str) and p]
+            if valid:
+                return valid
     except (OSError, ValueError, AttributeError):
         pass
     return list(DEFAULT_TIER0_PREFIXES)

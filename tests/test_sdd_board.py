@@ -388,3 +388,73 @@ def test_set_invalid_phase_warns(env):
     r = env.run("set", "--issue", "7", "--phase", "nope")
     assert r.returncode == 0 and "warning" in r.stderr
     assert env.sub("project", "item-edit") == []
+
+
+# --- final-review fixes ---
+
+def test_sync_warns_on_unexpected_gh_shape(env):
+    env.git_branch("t2/7-x")
+    env.freeze_t2("7-x")
+    env.board()
+    table = base_responses()
+    table["project item-list 5 --owner acme"] = {"stdout": "[]"}
+    env.respond(table)
+    r = env.run("sync")
+    assert r.returncode == 0
+    assert "warning" in r.stderr
+    assert "Traceback" not in r.stderr
+
+
+def test_import_warns_on_missing_keys(env):
+    env.board()
+    table = base_responses()
+    table["issue list --repo %s" % REPO] = J([{"url": "u"}])
+    env.respond(table)
+    r = env.run("import")
+    assert r.returncode == 0
+    assert "warning" in r.stderr
+    assert "Traceback" not in r.stderr
+
+
+def test_sync_warns_on_non_utf8_tasks_md(env):
+    env.git_branch("t2/7-x")
+    env.freeze_t2("7-x")
+    env.board()
+    (env.root / "specs" / "7-x" / "tasks.md").write_bytes(b"\xff\xfe\x00bad\n")
+    env.respond(base_responses(items=[item("IT7", 7)]))
+    r = env.run("sync")
+    assert r.returncode == 0
+    assert "warning" in r.stderr
+    assert "Traceback" not in r.stderr
+
+
+def test_init_unexpected_error_is_clean_exit_1(env):
+    table = base_responses()
+    table["repo view"] = {"stdout": "[]"}
+    env.respond(table)
+    r = env.run("init")
+    assert r.returncode == 1
+    assert "Traceback" not in r.stderr
+    assert "error" in r.stderr
+
+
+def test_init_failure_hints_project_scope(env):
+    env.respond({"repo view": J({"nameWithOwner": REPO, "owner": {"login": "acme"}}),
+                 "project create": {"stdout": "", "code": 1}})
+    r = env.run("init")
+    assert r.returncode == 1
+    assert "gh auth refresh -s project" in r.stderr
+
+
+def test_sync_from_subdirectory_finds_board_json(env):
+    env.git_branch("t2/7-x")
+    env.freeze_t2("7-x")
+    env.board()
+    sub = env.root / "src" / "deep"
+    sub.mkdir(parents=True)
+    env.respond(base_responses(items=[item("IT7", 7)]))
+    r = subprocess.run([sys.executable, str(SCRIPT), "sync"], cwd=sub,
+                       capture_output=True, text=True)
+    assert r.returncode == 0, r.stderr
+    assert "warning" not in r.stderr
+    assert len(env.sub("project", "item-edit")) == 1

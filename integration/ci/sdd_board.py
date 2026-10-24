@@ -15,7 +15,7 @@ from typing import Any, Dict, List, Optional
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from sdd_state import (  # noqa: E402
-    PHASES, FreezeError, current_branch, derive_phase, parse_branch,
+    PHASES, FreezeError, current_branch, derive_phase, parse_branch, root_from,
 )
 
 BOARD_FILE = Path(".sdd") / "board.json"
@@ -226,6 +226,11 @@ def cmd_init(root: Path, args) -> int:
         Board(owner, project).import_open()
     except (GhError, BoardError) as e:
         print("sdd-board: error: %s" % e, file=sys.stderr)
+        print("sdd-board: gh に project スコープがあるか確認してください "
+              "(gh auth refresh -s project)", file=sys.stderr)
+        return 1
+    except Exception as e:  # noqa: BLE001 - unexpected gh output etc.
+        print("sdd-board: error: 予期しないエラー (%s)" % type(e).__name__, file=sys.stderr)
         return 1
     return 0
 
@@ -253,7 +258,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         ("--merged", {"required": True, "choices": ["true", "false"]}),
         ("--closed", {"required": True, "choices": ["true", "false"]}))
     args = ap.parse_args(argv)
-    root = Path(args.root) if args.root else Path.cwd()
+    root = root_from(args.root)
 
     if args.cmd == "init":
         return cmd_init(root, args)
@@ -265,6 +270,8 @@ def main(argv: Optional[List[str]] = None) -> int:
          "close": cmd_close, "pr": cmd_pr}[args.cmd](board, root, args)
     except (GhError, BoardError, FreezeError) as e:
         print("sdd-board: warning: %s" % e, file=sys.stderr)
+    except Exception as e:  # noqa: BLE001 - board ops must never block work
+        print("sdd-board: warning: 予期しないエラー (%s)" % type(e).__name__, file=sys.stderr)
     return 0
 
 
