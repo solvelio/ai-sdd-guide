@@ -1,7 +1,0 @@
-{
-  "feature": "73-github-projects-board",
-  "tier": 2,
-  "phase": "implement",
-  "spec": "specs/73-github-projects-board/",
-  "note": "Issue #73. Frozen 2026-10-24 (spec/plan/tasks/traceability). Implementation via subagent-driven-development."
-}
