@@ -14,18 +14,21 @@ All phases are open to any agent with superpowers installed. The human decides w
 
 Every agent MUST stop after completing a phase and wait for explicit human instruction before starting the next phase. Never cross a phase boundary automatically.
 
-- Design complete (tasks.md created): generate handoff.md → update tasks.json → display kanban → stop. Do NOT start implementing.
-- Task implementation complete: commit → update tasks.json → display kanban → stop. Do NOT start verify.
-- Verify complete: report results → display kanban → stop.
+- Design complete (tasks.md created, `freeze.json` written after human approval): generate handoff.md → commit → `sdd-board.sh sync` → stop. Do NOT start implementing.
+- Task implementation complete: commit → `sdd-board.sh sync` → stop. Do NOT start verify.
+- Verify complete: report results → commit → `sdd-board.sh sync` → stop.
 
-Display kanban by running:
+Update the board by running:
 ```bash
-bash vendor/ai-sdd-guide/orchestration/tools/kanban.sh
+bash vendor/ai-sdd-guide/orchestration/tools/sdd-board.sh sync
 ```
 
-For a shareable web view, `orchestration/tools/kanban-html.sh` renders the same
-`.sdd/tasks.json` as a self-contained static HTML page (auto-published via
-`integration/ci/kanban-pages.yml` on GitHub Pages).
+`sync` derives the phase from the branch name and `specs/<feature>/` and sets the `Phase`
+field of the Issue's card on the GitHub Projects board (`.sdd/board.json`). It only warns
+(exit 0) when the network, credentials or config are missing. Push only just before
+creating the PR, not at each stop.
+
+If stuck at any point, comment the reason on the Issue and stop.
 
 ## Rules for design agents (brainstorm/spec/plan/tasks)
 
@@ -41,19 +44,17 @@ For a shareable web view, `orchestration/tools/kanban-html.sh` renders the same
   a diff summary comparing the original Issue body to the frozen spec. Explicitly
   document what changed, what was dropped, and why. This is mandatory for Tier 2.
 - At end of tasks phase, generate `specs/<feature>/handoff.md` from `orchestration/templates/handoff.md.example`.
-- Update `.sdd/tasks.json`: add the feature entry with `id` (feature slug), `phase: "tasks"`, `status: "pending"`, and optionally `handoff: null`.
-- Display kanban and stop.
+- Commit, run `orchestration/tools/sdd-board.sh sync`, and stop.
 
 ## Rules for implementation agents
 
 - Read `specs/<feature>/handoff.md` before touching any code.
 - Implement exactly the tasks in `specs/<feature>/tasks.md`. No more, no less.
-- Do NOT modify files under `specs/`, `.sdd/state.json` (phase/tier), or `orchestration/`.
-- When complete, update `.sdd/tasks.json`: set your feature's `status` to `"completed"`.
-- Display kanban and stop.
+- Do NOT modify files under `specs/` (except checking boxes in `tasks.md`) or `orchestration/`.
+- When complete, commit, run `orchestration/tools/sdd-board.sh sync`, and stop.
 - If the spec is wrong, ambiguous, or insufficient:
   1. Stop immediately.
-  2. Set `.sdd/tasks.json` status to `"blocked"` and fill `blocked_reason`.
+  2. Comment the reason on the Issue.
   3. Do not redesign — wait for a human to escalate.
 
 ## Running sdd-reviewer (verify phase)

@@ -34,39 +34,35 @@ AIエージェントと人間が同じルールで開発するための土台を
 
 ## マルチエージェント・オーケストレーション
 
-superpowers がインストールされたエージェントであれば誰でも設計・実装・verify の全フェーズを担当できる。人間が「このタスクをこのエージェントで」と指示し、エージェントはフェーズ完了後に kanban を表示して停止する。
+superpowers がインストールされたエージェントであれば誰でも設計・実装・verify の全フェーズを担当できる。人間が「このタスクをこのエージェントで」と指示し、エージェントはフェーズ完了後に commit → `sdd-board.sh sync` を実行して停止する。
 
 | コンポーネント | パス | 役割 |
 |---|---|---|
 | エージェントルール | `orchestration/rules/orchestration.md` | フェーズ割り当て・停止ルール（全agent）|
-| スキーマ | `orchestration/schema/tasks.schema.json` | `tasks.json` の定義 |
 | テンプレート | `orchestration/templates/handoff.md.example` | handoff.md の雛形 |
 | Reviewer プロンプト | `integration/prompts/sdd-reviewer-prompt.md` | エージェント非依存の verify 指示文 |
-| Kanban | `orchestration/tools/kanban.sh` | `.sdd/tasks.json` をターミナルにKanban表示 |
-| Kanban (HTML) | `orchestration/tools/kanban-html.sh` | `.sdd/tasks.json` を静的HTMLとして出力 |
-| Kanban Pages | `integration/ci/kanban-pages.yml` | HTMLを生成し GitHub Pages へ自動公開する見本 |
+| 凍結コマンド | `orchestration/tools/sdd-freeze.sh` | `specs/<feature>/freeze.json` を作る（対象ファイルのハッシュを記録）|
+| ボード操作 | `orchestration/tools/sdd-board.sh` | GitHub Projects のボードを `sync` / `init` / `import` / `set` / `close` / `pr` で操作 |
+| ボード Actions | `integration/ci/sdd-board.yml` | Issue・PR のイベントでボードを更新する見本 |
 
-### Kanban 表示
+### 状態とボード
 
-```bash
-# ターミナル表示
-bash vendor/ai-sdd-guide/orchestration/tools/kanban.sh
-```
-
-### Web 可視化（GitHub Pages）
-
-`.sdd/tasks.json` を静的HTMLとして出力し、push のたびに GitHub Pages で公開できる。
-`kanban.sh` は変更せず、HTML生成は別スクリプト（単一責任）。
+状態ファイルは持たない。Tier・feature・フェーズは、ブランチ名 `t<Tier>/<Issue番号>-<名前>` と
+`specs/<Issue番号>-<名前>/` のファイルから割り出す（`python3 vendor/ai-sdd-guide/integration/ci/sdd_state.py phase`）。
+ボードは GitHub Projects（アカウントで 1 枚）で、割り出したフェーズを表示するだけ。
 
 ```bash
-# 単発でHTMLを生成（stdout または出力ファイル）
-bash vendor/ai-sdd-guide/orchestration/tools/kanban-html.sh .sdd/tasks.json kanban.html
+# ボードを作り、開いている Issue を backlog で取り込む（初回のみ）
+bash vendor/ai-sdd-guide/orchestration/tools/sdd-board.sh init
+# 今のブランチの Issue のカードのフェーズを更新
+bash vendor/ai-sdd-guide/orchestration/tools/sdd-board.sh sync
 
-# 自動公開する場合（GitHub Actions + Pages）
+# Actions で自動更新する場合（secret SDD_PROJECT_TOKEN: classic PAT、project スコープ）
 mkdir -p .github/workflows
-cp vendor/ai-sdd-guide/integration/ci/kanban-pages.yml .github/workflows/
-# その後 Settings → Pages → Source を "GitHub Actions" にする
+cp vendor/ai-sdd-guide/integration/ci/sdd-board.yml .github/workflows/
 ```
+
+設定は `.sdd/board.json`（`owner`・`project`・`tier0_branch_prefixes`）。GitLab・Azure DevOps は #71・#72、Bitbucket は Issues 廃止のため対象外。
 
 ## 機能単位カタログ
 
@@ -82,8 +78,8 @@ superpowers が使えるエージェントが spec 作成時（planned）と ver
 ## Issue トラッカー連携
 
 GitHub / GitLab / Bitbucket / Azure DevOps のいずれでも、Issue 登録から SDD 完了まで同じ
-流れで回せる。**ステータスの正本は `.sdd/tasks.json`（SDD かんばん）に統一**し、プラット
-フォームのネイティブボードは任意のミラー扱い。
+流れで回せる。**ステータスはブランチ名と `specs/` から割り出し**、
+ボード（GitHub Projects）は表示だけを担う。
 
 | コンポーネント | パス | 役割 |
 |---|---|---|
@@ -127,26 +123,13 @@ cp vendor/ai-sdd-guide/integration/ci/sdd-check.yml .github/workflows/
 ```
 スキルとSDDフェーズの対応は `docs/02-roles.md` を参照。
 
-`.sdd/state.json`（Tier/フェーズの状態。hooks・CIが参照）は作業中に agent が作成・更新する。
-雛形は `templates/sdd-state.example.json`、値の定義は `templates/sdd-state.schema.json`。
+ブランチ名を `t<Tier>/<Issue番号>-<名前>` にすれば、Tier とフェーズは自動で割り出される（状態ファイルは不要）。
 
 ### 初回導入時の注意
 
-SDD導入自体が hooks と CI の対象になる（鶏と卵問題）。初回コミット時は
-`.sdd/state.json` を Tier 0 で作成してから作業すること：
-```bash
-mkdir -p .sdd
-cat > .sdd/state.json << 'EOF'
-{
-  "feature": "integrate-ai-sdd-guide",
-  "tier": 0,
-  "phase": "implement",
-  "justification": "SDD infrastructure setup — no application logic changed"
-}
-EOF
-```
+SDD導入自体が hooks と CI の対象になる（鶏と卵問題）。導入の Issue を作り、Tier 0 のブランチ（例: `t0/1-integrate-ai-sdd-guide`）で作業すること。
 
-また、CI テンプレート (`sdd-check.yml`) の exempt パターンはそのまま使えるが、
+CI テンプレート (`sdd-check.yml`) の exempt パターンはそのまま使えるが、
 プロジェクト固有のリンター設定（`.yamllint` 等）で既存コードとの整合を取る必要がある場合がある。
 Codex の project-local hooks は trusted project でのみ読み込まれ、初回または hook 変更後に `/hooks` で trust が必要。
 

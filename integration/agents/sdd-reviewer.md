@@ -27,8 +27,8 @@ Before reporting PASS/FAIL, verify the following 8 items:
 
 1. **AC Traceability**: All acceptance criteria from the original Issue are accounted for in the traceability table. Any missing AC must be flagged.
 2. **Scope Exclusions**: Any AC marked as scope-excluded/dropped must have a follow-up issue URL documented.
-3. **State Consistency**: `state.json` `feature`, `tier`, and `phase` must match the current work item.
-4. **Tasks.json Validity**: The feature exists in `tasks.json` and is schema-valid.
+3. **Name Consistency**: The branch name (`t<Tier>/<Issue番号>-<名前>`), the `specs/<Issue番号>-<名前>/` directory name, and the Issue number in `issue-snapshot.json` must all agree.
+4. **Freeze Validity**: `freeze.json` is valid (`python3 vendor/ai-sdd-guide/integration/ci/sdd_state.py phase` does not error).
 5. **Tasks.md Completion Status**: The completion status in `tasks.md` matches the completion report.
 6. **Test Coverage**: Each AC maps to an executable test (visual inspection alone is NOT sufficient).
 7. **Fail-Open/Negative Tests**: Check for fail-open paths and missing negative tests.

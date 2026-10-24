@@ -20,7 +20,7 @@ into a downstream project.
   available, Codex should not be the primary implementation agent.
 - vLLM receives a self-contained implementation brief: issue URL, spec path,
   task list, allowed write scope, required tests, and report path.
-- vLLM must not edit frozen specs, `.sdd/state.json`, or unrelated files unless
+- vLLM must not edit frozen specs, `freeze.json`, or unrelated files unless
   the brief explicitly grants that scope.
 - The `gpt-5.4-mini` reviewer is read-only. It may inspect diffs and run tests,
   but must not fix findings.

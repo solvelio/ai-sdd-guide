@@ -1,7 +1,0 @@
-{
-  "feature": "user-login",
-  "tier": 2,
-  "phase": "implement",
-  "spec": "specs/user-login/",
-  "note": ""
-}

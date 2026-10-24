@@ -21,12 +21,12 @@ git worktree add .worktrees/<branch-name> -b <branch-name>
 cd .worktrees/<branch-name>
 ```
 
-Each worktree has its own `.sdd/` directory, so phase tracking is automatically isolated per feature.
+Each worktree is on its own branch, so the derived Tier and phase are automatically isolated per feature.
 
 ### Why
 
-A single `.sdd/state.json` in the primary checkout would conflict across parallel feature branches.
-By requiring a linked worktree, phase state is per-branch by construction.
+The Tier and phase are derived from the branch name, so parallel features in one checkout would clash.
+By requiring a linked worktree, each feature has its own branch by construction.
 
 ## Escape hatch
 
