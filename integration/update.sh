@@ -50,6 +50,12 @@ if [[ -f "$INTEGRATION/ci/sdd-check.yml" ]]; then
   log "updated .github/workflows/sdd-check.yml"
 fi
 
+if [[ -f "$INTEGRATION/ci/sdd-board.yml" ]]; then
+  mkdir -p "$PROJECT/.github/workflows"
+  cp "$INTEGRATION/ci/sdd-board.yml" "$PROJECT/.github/workflows/sdd-board.yml"
+  log "updated .github/workflows/sdd-board.yml"
+fi
+
 # --- Protected: create if absent, diff if changed ---
 
 protected=(

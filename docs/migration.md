@@ -267,3 +267,22 @@ feature ごとに以下を確認する:
 - [ ] `integration/hooks/sdd-validate-hook.sh` — hook
 - [ ] `integration/prompts/sdd-reviewer-prompt.md` — reviewer prompt
 - [ ] `rules/` — core / workflow / orchestration / conventions / issue-intake の freeze/verify 条件
+
+---
+
+## v3: GitHub Projects とファイルからの割り出し
+
+進捗の管理を `.sdd/state.json` / `.sdd/tasks.json` から、GitHub Projects のボードと「ブランチ名・`specs/` のファイル」からの割り出しに切り替える。一括で切り替える（`state.json` / `tasks.json` へのフォールバックはない）。仕組みは [README](../README.md) と各 docs、用語と規則は `specs/73-github-projects-board/spec.md` の「用語と規則」を参照。
+
+consumer repo では次の順に行う。
+
+1. **作業中のブランチを終わらせるか、改名する。** 仕掛かりのブランチは merge して終わらせるか、`git branch -m t<Tier>/<Issue番号>-<名前>`（例: `git branch -m t2/42-add-login`）で新しい名前にする。旧名のままだと guard が通らない。
+2. **submodule を上げる。** `git submodule update --remote vendor/ai-sdd-guide`（または目的の revision を checkout）して、親 repo でコミットする。
+3. **`update.sh` を実行する。** `bash vendor/ai-sdd-guide/integration/update.sh`。`.github/workflows/sdd-check.yml` と `.github/workflows/sdd-board.yml` が毎回上書きされる。`.sdd/board.json` は触らない。
+4. **`.sdd/state.json` と `.sdd/tasks.json` を消す。** もう読まれない。
+5. **`SDD_PROJECT_TOKEN` を登録する。** `project` スコープの classic PAT を作り、repo secret `SDD_PROJECT_TOKEN` に登録する（`sdd-board.yml` が使う）。
+6. **`sdd-board.sh init` を実行する。** `bash vendor/ai-sdd-guide/orchestration/tools/sdd-board.sh init [--owner OWNER] [--title TITLE]`。Project と Phase フィールドを作り、`.sdd/board.json`（`owner`・`project`・任意で `tier0_branch_prefixes`）を書き、open な Issue をボードに取り込む。`.sdd/board.json` はコミットする。
+7. **リポジトリごとのビューを作る。** Projects の画面でビューを足し、絞り込みに `repo:owner/name` を指定する。
+8. **以降、新しい作業にはすべて Issue が要る。** Tier 0 も例外ではない（`t0/<Issue番号>-<名前>`）。dependabot / renovate などの bot ブランチは `tier0_branch_prefixes` で除外される。
+
+既存の完了済み `specs/<feature>/` ディレクトリは改名しない。新しい仕組みの feature 名は `<Issue番号>-<名前>` だが、過去分はそのまま残す。
