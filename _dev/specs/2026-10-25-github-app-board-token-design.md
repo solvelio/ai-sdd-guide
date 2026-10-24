@@ -43,7 +43,7 @@ Issue: #78（Tier 2）。#75（PAT のスコープの記載不足と、gh の失
 
 - トークンは GitHub App。App `solvelio-sdd-board` は作成・インストール済み。
   - 権限: リポジトリの Issues・Pull requests・Metadata は読み取り、Organization の Projects は読み書き。
-  - インストール先: `solvelio` の選んだリポジトリだけ（今は ai-sdd-guide と soro-quest）。
+  - インストール先: `solvelio` の All repositories（2026-10-25 改訂。作成時は選んだリポジトリだけだった）。
 - 鍵は 1 つだけ作り、1Password に保管する。リポジトリごとに鍵は作らない。
 - 鍵を配るスクリプトは、人の Mac（1Password アプリと連携した `op`、`gh`）で実行する前提。
 - PAT（`SDD_PROJECT_TOKEN`）は、App の鍵がないリポジトリのための予備として当面残す（設計者判断。移行が終わったら別 Issue で消す）。
@@ -72,10 +72,10 @@ Issue: #78（Tier 2）。#75（PAT のスコープの記載不足と、gh の失
 `orchestration/tools/sdd-app-secret.sh`（名前は設計者判断）。
 
 - 入力: 1Password の参照（例 `op://<保管庫>/<項目>/<欄>`、引数）、対象リポジトリ（`owner/name` を並べる。または `--all --org <org>`）、App ID（引数。なければ対象リポジトリの `board.json` の `app_id`）。
-- App のインストール先は、人の `gh` で `GET /user/installations` から App ID に一致するものを探す（設計者判断）。見つからなければ止まる。
+- App のインストール先は、人の `gh` で `GET /orgs/{org}/installations` から App ID に一致するものを探す（2026-10-25 改訂: `GET /user/installations` は App のユーザー用トークン専用で使えなかった。設計者判断）。見つからなければ止まる。
 - `--all` の対象: Organization のリポジトリのうち `.sdd/board.json` を持つもの（API で確かめる）。
 - リポジトリごとにすること:
-  1. App のインストール先に入っていなければ追加する（`gh api` で。ブラウザ不要）。
+  1. （2026-10-25 改訂）インストール先への追加はしない。App は Organization の All repositories にインストールしておき、スクリプトは `GET /orgs/{org}/installations` でそうなっていることを確かめる。`/user/installations/...` は人の `gh` のログインでは呼べなかった（人の判断で A 案）。
   2. リポジトリの secret `SDD_APP_PRIVATE_KEY` に鍵を入れる。public・private を問わずリポジトリの secret にする（設計者判断。Organization の secret の対象一覧を変えるには人の `gh` に `admin:org` が要るため。全リポジトリを同じ扱いにできる）。
   3. `.sdd/board.json` に `app_id` がなければ、その旨を表示する（ファイルは書き換えない。変更は PR で行うため）。
 - 鍵は `op read` の出力を `gh secret set` の標準入力へ直接渡す。変数・ファイルに置かない。

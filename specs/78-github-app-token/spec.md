@@ -39,8 +39,9 @@
 - 引数: `--op-ref <op://...>`（必須）、`--app-id <N>`（任意）、対象（`owner/name` を 1 つ以上、または `--all --org <org>`）、`--dry-run`。
 - `--all --org <org>` の対象: その Organization のリポジトリのうち `.sdd/board.json` を持つもの。
 - App ID: `--app-id`、なければ対象リポジトリの `board.json` の `app_id`。決まらなければ止まる。
-- インストール先: 人の `gh` で `GET /user/installations` から App ID に一致するものを探す。見つからなければ止まる。
-- リポジトリごとに: (1) インストール先に入っていなければ `PUT /user/installations/{installation_id}/repositories/{repository_id}` で追加、(2) `op read` の出力を `gh secret set SDD_APP_PRIVATE_KEY -R <repo>` の標準入力へ直接渡す、(3) `board.json` に `app_id` がなければその旨を表示する（書き換えない）。
+- App は Organization の **All repositories** にインストールしておく（新しいリポジトリも自動で対象に入る）。スクリプトはインストール先を追加しない。`/user/installations/...` の API は GitHub App のユーザー用トークンか PAT でしか呼べず、人の `gh` のログイン（OAuth アプリのトークン）では使えないため（2026-10-25 に確認）。
+- インストール先の確認: 人の `gh` で `GET /orgs/{org}/installations` から App ID に一致するものを探す（`{org}` は対象リポジトリの持ち主。対象の持ち主が 1 つでなければ止まる）。見つからなければ止まる。`repository_selection` が `all` でなければ、All repositories に変える手順を表示して止まる。
+- リポジトリごとに: (1) `op read` の出力を `gh secret set SDD_APP_PRIVATE_KEY -R <repo>` の標準入力へ直接渡す、(2) `board.json` に `app_id` がなければその旨を表示する（書き換えない）。
 - 鍵を変数・ファイル・標準出力・標準エラーに出さない。
 - `--dry-run` では、各リポジトリで何をするかを表示し、変更しない（`op read` も呼ばない）。
 - 何度実行しても結果が同じ。
@@ -51,7 +52,7 @@
 - [ ] SAC-2: 認証モードが `pat` のとき、ボードの 3 つの手順は `SDD_PROJECT_TOKEN` を使い、今までどおり動く（元 Issue: 78-AC2）
 - [ ] SAC-3: 認証モードが `none` のとき、警告を出してボードの手順を飛ばし、ジョブは成功する。PR の Tier ラベル付けは、どのモードでも標準のトークンで行う（元 Issue: 78-AC3）
 - [ ] SAC-4: `integration/ci/sdd-board.yml` と `.github/workflows/sdd-board.yml` の `run:` ブロックに `${{` がない（元 Issue: 78-AC4）
-- [ ] SAC-5: docs に GitHub App の作成手順（Webhook なし、権限: Organization の Projects 読み書き・リポジトリの Issues / Pull requests / Metadata 読み取り、インストール先は選んだリポジトリ）、鍵の作成と 1Password への保管、`sdd-app-secret.sh` の使い方、リポジトリを足す手順がある。`docs/migration.md` に PAT から App へ移る手順（v3.1）がある（元 Issue: 78-AC5）
+- [ ] SAC-5: docs に GitHub App の作成手順（Webhook なし、権限: Organization の Projects 読み書き・リポジトリの Issues / Pull requests / Metadata 読み取り、インストール先は Organization の All repositories）、鍵の作成と 1Password への保管、`sdd-app-secret.sh` の使い方、リポジトリを足す手順がある。`docs/migration.md` に PAT から App へ移る手順（v3.1）がある（元 Issue: 78-AC5）
 - [ ] SAC-6: `sdd-app-secret.sh` が「鍵を配るスクリプト」の規則どおりに動く。鍵の値が標準出力・標準エラーに出ない（元 Issue: 78-AC6）
 - [ ] SAC-7: PAT の必要スコープが、`README.md`・`docs/04-issue-tracker.md`・`docs/migration.md`・`integration/issue-tracker/README.md`・`sdd-board.yml` の先頭コメント・`sdd_board.py` の init 失敗時のヒントで「classic、`repo`（private リポジトリの場合）・`project`・`read:org`」になっている。`gh` の失敗時、stderr が権限不足を示す定型文（`missing required scopes`、`INSUFFICIENT_SCOPES`、`Resource not accessible by integration`）を含むときは、警告に「トークンの権限が足りない可能性があります」を加える。stderr そのものは出さない（元 Issue: 78-AC7）
 - [ ] SAC-8: 既存のテストがすべて通り、認証モードの判定、`board.json` の `app_id`、`init` のキー保持、スクリプト、権限不足の見分けにテストがある（元 Issue: 78-AC8）

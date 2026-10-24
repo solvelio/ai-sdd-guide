@@ -99,23 +99,24 @@
 
 **Interfaces（Produces）:** CLI は spec の「鍵を配るスクリプト」のとおり。
 - `sdd-app-secret.sh --op-ref REF [--app-id N] [--dry-run] (OWNER/NAME... | --all --org ORG)`
-- 使う `gh`: `repo list ORG --json nameWithOwner --limit 1000`、`api repos/OWNER/NAME/contents/.sdd/board.json`（`--all` の判定と `app_id` の読み取り）、`api --paginate /user/installations`、`api repos/OWNER/NAME --jq .id`、`api --paginate /user/installations/{id}/repositories`、`api -X PUT /user/installations/{id}/repositories/{repo_id}`、`secret set SDD_APP_PRIVATE_KEY -R OWNER/NAME`（値は標準入力）。
+- 使う `gh`: `repo list ORG --json nameWithOwner --limit 1000`、`api repos/OWNER/NAME/contents/.sdd/board.json`（`--all` の判定と `app_id` の読み取り）、`api --paginate /orgs/ORG/installations`（App のインストール先と `repository_selection` の確認）、`secret set SDD_APP_PRIVATE_KEY -R OWNER/NAME`（値は標準入力）。`/user/installations/...` と `PUT` は使わない。
 - 終了コード: 0 成功、1 入力の誤り・App が見つからない・`op` の失敗、2 予期しない失敗。
 
 - [ ] **Step 1: テストを書く**（偽の `op` は `FAKE_OP_OUTPUT` の内容を出す。`FAKE_OP_EXIT` で失敗させられる。偽の `gh` は `secret set` の標準入力を記録ファイルに書く）
   - `test_sets_secret_from_op_via_stdin`: 対象 1 つ → `gh secret set SDD_APP_PRIVATE_KEY -R solvelio/x` が 1 回呼ばれ、その標準入力が偽の鍵と一致する
   - `test_key_never_printed`: 偽の鍵の文字列（`-----BEGIN` 以外の行）が標準出力・標準エラーに出ない
-  - `test_installs_repo_when_missing`: インストール先にないリポジトリに `PUT /user/installations/{id}/repositories/{repo_id}` を送る
-  - `test_second_run_does_not_reinstall`: すでに入っていれば `PUT` を送らない
+  - `test_selected_installation_fails_with_guidance`: インストール先の `repository_selection` が `selected` → 終了コード 1、`All repositories` を含む案内を表示、`secret set` を呼ばない
+  - `test_never_calls_user_installations_or_put`: どの呼び出しにも `/user/installations` と `-X PUT` がない
   - `test_app_id_from_board_json`: `--app-id` なしで board.json の `app_id` を使う
   - `test_missing_app_id_fails`: `--app-id` も board.json の `app_id` もない → 終了コード 1、`secret set` を呼ばない
-  - `test_app_installation_not_found_fails`: `/user/installations` に一致がない → 終了コード 1
+  - `test_app_installation_not_found_fails`: `/orgs/ORG/installations` に一致がない → 終了コード 1
+  - `test_mixed_owners_fail`: 対象の持ち主が 2 つ以上 → 終了コード 1、`secret set` を呼ばない
   - `test_warns_when_board_json_lacks_app_id`: `--app-id` 指定で board.json に `app_id` がない → その旨を表示、書き換えない
   - `test_all_selects_repos_with_board_json`: `--all --org solvelio` → board.json を持つリポジトリだけが対象
   - `test_dry_run_changes_nothing`: `--dry-run` → `PUT`・`secret set`・`op` を呼ばない、計画を表示
   - `test_op_failure_does_not_set_secret`: 偽の `op` が終了コード 1 → `secret set` を呼ばない、終了コード 1
   - `test_non_pem_output_does_not_set_secret`: 偽の `op` の出力の 1 行目が `-----BEGIN` で始まらない → `secret set` を呼ばない
-  - `test_uses_paginate_for_installation_lists`: 2 つの一覧の呼び出しに `--paginate`
+  - `test_uses_paginate_for_installation_lists`: `/orgs/ORG/installations` の呼び出しに `--paginate`
 - [ ] **Step 2: 失敗を確認**: `python -m pytest tests/test_sdd_app_secret.py -q` → FAIL
 - [ ] **Step 3: 実装**: `set -euo pipefail`。鍵は `op read --no-newline` ではなく PEM の改行を保つ `op read "$REF"` を使い、1 行目を確かめてから残りと合わせて `gh secret set` の標準入力に流す（シェル変数に入れるのは 1 行目だけ）。
 - [ ] **Step 4: 通ることを確認** → PASS、全体 PASS
@@ -129,7 +130,7 @@
 - Modify: `tests/test_migration_guide.py`（既存のテストが通ることを確かめる。必要なら v3.1 の検査を足す）
 
 書く内容:
-- `docs/04-issue-tracker.md` に「GitHub App で動かす」節: App の作り方（Webhook のチェックを外す、権限: Organization の Projects = Read and write、リポジトリの Issues / Pull requests / Metadata = Read-only、インストール先は Only select repositories）、鍵の作り方と 1Password への保管（画面からダウンロードした `.pem` を 1Password に入れ、ファイルは消す）、`board.json` に `app_id` を書くこと、`sdd-app-secret.sh` の使い方（Mac で `op` を 1Password アプリと連携させて実行）、リポジトリを足す手順（board.json を置く → スクリプトを 1 回実行）。
+- `docs/04-issue-tracker.md` に「GitHub App で動かす」節: App の作り方（Webhook のチェックを外す、権限: Organization の Projects = Read and write、リポジトリの Issues / Pull requests / Metadata = Read-only、インストール先は All repositories。新しいリポジトリも自動で対象に入る）、鍵の作り方と 1Password への保管（画面からダウンロードした `.pem` を 1Password に入れ、ファイルは消す）、`board.json` に `app_id` を書くこと、`sdd-app-secret.sh` の使い方（Mac で `op` を 1Password アプリと連携させて実行）、リポジトリを足す手順（board.json を置く → スクリプトを 1 回実行）。
 - `docs/migration.md` に「v3.1: PAT から GitHub App へ」: App を作る → 鍵を 1Password へ → 各リポジトリの board.json に `app_id`（PR）→ スクリプトで鍵を配る → PR の CI で App で動くことを確かめる → `SDD_PROJECT_TOKEN` を消し、PAT を無効にする。
 - PAT のスコープの書き方（Global Constraints）を、spec の SAC-7 に挙げたファイルすべてで直す。
 
@@ -150,7 +151,7 @@
 
 - [ ] **Step 1: テストを書く**: `test_board_json_has_app_id`: `.sdd/board.json` の `app_id` が整数
 - [ ] **Step 2: 失敗を確認** → FAIL
-- [ ] **Step 3: App ID を調べて書く**: `gh api --paginate /user/installations`（人の `gh`）で `app_slug == "solvelio-sdd-board"` の `app_id` を読み、`board.json` に書く
+- [ ] **Step 3: App ID を調べて書く**: `gh api --paginate /orgs/solvelio/installations`（人の `gh`）で `app_slug == "solvelio-sdd-board"` の `app_id` を読み、`board.json` に書く
 - [ ] **Step 4: 人に頼む（止まる）**: (1) App の画面で秘密鍵を作り、1Password に保管して `.pem` を消す、(2) Mac で `sdd-app-secret.sh --op-ref <参照> solvelio/ai-sdd-guide` を実行する（先に `--dry-run`）。終わったら `gh secret list -R solvelio/ai-sdd-guide` に `SDD_APP_PRIVATE_KEY` があることを確かめる
 - [ ] **Step 5: 通ることを確認**: 全体 PASS
 - [ ] **Step 6: コミット**: `chore(78-github-app-token): このリポジトリのボード更新を GitHub App に切り替える`

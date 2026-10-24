@@ -28,8 +28,8 @@
 1. **フォークからの PR**: secret が渡らないので、`app_id` があっても鍵がない → `none`（警告して成功）。失敗させてはいけない（T1 `test_auth_mode_app_id_without_key_and_pat_is_none`）。
 2. **`op read` の失敗**: 1Password がロック中・キャンセル・参照違いだと `op` は失敗する。そのまま `gh secret set` の標準入力に流すと、**空の secret が登録されて App が壊れる**。`op` が失敗したら、または出力の 1 行目が `-----BEGIN` で始まらなければ、`gh secret set` を呼ばずに止まる（T3 `test_op_failure_does_not_set_secret`、`test_non_pem_output_does_not_set_secret`）。
 3. **`board.json` の型の誤り**: `"app_id": "123"` や `true` は設定の誤り → `error`（ジョブを失敗させ、理由を出す）。`board.json` がないリポジトリは `none`（T1 `test_auth_mode_invalid_app_id_is_error`、`test_auth_mode_without_board_json_is_none`）。
-4. **2 回目の実行**: すでにインストール先に入っているリポジトリに `PUT` を送らない。secret は上書きしてよい（T3 `test_second_run_does_not_reinstall`）。
-5. **インストール一覧の件数**: `GET /user/installations` と `GET /user/installations/{id}/repositories` はページ分けされる。`gh api --paginate` を使う（T3 `test_uses_paginate_for_installation_lists`）。
+4. **App が一部のリポジトリにしか入っていない**: インストール先が `selected` のままだと、新しいリポジトリでトークンを作れずジョブが失敗する。スクリプトは `all` でなければ案内を出して止まる（T3 `test_selected_installation_fails_with_guidance`）。
+5. **インストール一覧の件数**: `GET /orgs/{org}/installations` はページ分けされる。`gh api --paginate` を使う（T3 `test_uses_paginate_for_installation_lists`）。
 
 ## 方針
 
