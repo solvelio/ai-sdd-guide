@@ -86,7 +86,7 @@ for repo in "${TARGETS[@]}"; do
   bid=$(board_app_id "$repo" || true)
 
   if [ "$DRY" -eq 1 ]; then
-    echo "  [dry-run] $SECRET を $repo に設定する（op read $REF）"
+    echo "  [dry-run] $SECRET を $repo に設定する（op read ${REF}）"
     [ -n "$bid" ] || echo "  [dry-run] 注意: board.json に app_id がありません（書き換えません）"
     continue
   fi
