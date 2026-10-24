@@ -234,8 +234,9 @@ def cmd_init(root: Path, args) -> int:
         Board(owner, project).import_open()
     except (GhError, BoardError) as e:
         print("sdd-board: error: %s" % e, file=sys.stderr)
-        print("sdd-board: gh に project スコープがあるか確認してください "
-              "(gh auth refresh -s project)", file=sys.stderr)
+        print("sdd-board: gh の権限を確認してください "
+              "(classic PAT なら repo（private リポジトリの場合）・project・read:org。"
+              "gh auth refresh -s project,read:org)", file=sys.stderr)
         return 1
     except Exception as e:  # noqa: BLE001 - unexpected gh output etc.
         print("sdd-board: error: 予期しないエラー (%s)" % type(e).__name__, file=sys.stderr)
