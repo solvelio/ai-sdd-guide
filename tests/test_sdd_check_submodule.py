@@ -1,5 +1,5 @@
 """sdd-check.yml must work when copied into a consumer with the guide at vendor/ai-sdd-guide."""
-import json
+import os
 import re
 import subprocess
 from pathlib import Path
@@ -44,17 +44,36 @@ def test_sdd_job_checkout_fetches_submodules():
     _assert_submodule_fix(WORKFLOW.read_text())
 
 
-def test_sdd_validate_step_runs_in_consumer_layout(tmp_path):
-    (tmp_path / "vendor").mkdir()
-    (tmp_path / "vendor" / "ai-sdd-guide").symlink_to(ROOT)
+def _run_validate_step(tmp_path, head_ref, labels=""):
+    (tmp_path / "vendor").mkdir(exist_ok=True)
+    link = tmp_path / "vendor" / "ai-sdd-guide"
+    if not link.exists():
+        link.symlink_to(ROOT)
     script = _step_run_script(WORKFLOW.read_text(), "Run sdd-validate")
-    # Emulate GitHub's ${{ }} interpolation for a Tier 0 PR.
-    values = iter(["t0/1-x", ""])
-    script = re.sub(r"\$\{\{.*?\}\}", lambda _m: next(values), script)
-    result = subprocess.run(
-        ["bash", "-e", "-c", script], cwd=tmp_path, capture_output=True, text=True
+    env = {**os.environ, "SDD_HEAD_REF": head_ref, "SDD_PR_LABELS": labels}
+    return subprocess.run(
+        ["bash", "-e", "-c", script], cwd=tmp_path, capture_output=True, text=True, env=env
     )
+
+
+def test_sdd_validate_step_runs_in_consumer_layout(tmp_path):
+    result = _run_validate_step(tmp_path, "t0/1-x")
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_sdd_validate_step_rejects_bad_branch(tmp_path):
+    result = _run_validate_step(tmp_path, "feat/x")
+    assert result.returncode == 1, result.stdout + result.stderr
+
+
+def test_sdd_validate_step_rejects_tier2_without_specs(tmp_path):
+    result = _run_validate_step(tmp_path, "t2/1-x")
+    assert result.returncode == 1, result.stdout + result.stderr
+
+
+def test_sdd_validate_step_rejects_label_mismatch(tmp_path):
+    result = _run_validate_step(tmp_path, "t0/1-x", "sdd:tier-2")
+    assert result.returncode == 1, result.stdout + result.stderr
 
 
 def test_no_state_reset_gate():
@@ -72,8 +91,11 @@ def test_no_orchestration_job():
 
 def test_validate_step_passes_pr_context():
     run = _step_run_script(WORKFLOW.read_text(), "Run sdd-validate")
-    assert "--pr" in run and "--pr-labels" in run
-    assert "GITHUB_HEAD_REF" in run or "github.head_ref" in run
+    assert re.search(r"--pr(?![-\w])", run) and "--pr-labels" in run
+    assert "${{" not in run
+    text = WORKFLOW.read_text()
+    step = text[text.index("- name: Run sdd-validate"):text.index("- name: Tests")]
+    assert re.search(r"^\s+env:\n(?:\s+\w+: .*\n)*?\s+\w+: \$\{\{ github\.head_ref \}\}", step, re.M)
 
 
 def test_migration_guide_uses_submodule_validator_path():
