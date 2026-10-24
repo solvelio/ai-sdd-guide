@@ -1,0 +1,86 @@
+# Keeps the GitHub Projects board in sync on Issue / PR events.
+# Copy to .github/workflows/. Assumes this guide is a submodule at vendor/ai-sdd-guide
+# and the board is configured in .sdd/board.json.
+# Board updates need a repo secret SDD_PROJECT_TOKEN (PAT with project access);
+# without it they are skipped with a warning. Tier labels only need the default token.
+name: SDD Board
+on:
+  issues:
+    types: [opened, closed]
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  board:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          # If the guide submodule is private, add a repo secret SDD_GUIDE_TOKEN that can read both this repo and the guide.
+          token: ${{ secrets.SDD_GUIDE_TOKEN || github.token }}
+          persist-credentials: false
+
+      - name: Check project token
+        id: token
+        env:
+          SDD_PROJECT_TOKEN: ${{ secrets.SDD_PROJECT_TOKEN }}
+        run: |
+          if [ -z "$SDD_PROJECT_TOKEN" ]; then
+            echo "::warning::SDD_PROJECT_TOKEN is not set; skipping board update."
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "available=true" >> "$GITHUB_OUTPUT"
+
+      - name: Add tier label to PR
+        if: github.event_name == 'pull_request' && github.event.action != 'closed'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SDD_HEAD_REF: ${{ github.head_ref }}
+          SDD_PR: ${{ github.event.pull_request.number }}
+        run: |
+          state=$(python3 vendor/ai-sdd-guide/integration/ci/sdd_state.py branch --branch "$SDD_HEAD_REF") || {
+            echo "Not an SDD branch; skipping tier label."
+            exit 0
+          }
+          tier=$(printf '%s' "$state" | python3 -c 'import json,sys; print(json.load(sys.stdin)["tier"])')
+          label="sdd:tier-$tier"
+          gh label create "$label" --force >/dev/null 2>&1 || true
+          gh pr edit "$SDD_PR" --add-label "$label" || echo "::warning::could not add label $label"
+
+      - name: Issue opened -> backlog
+        if: steps.token.outputs.available == 'true' && github.event_name == 'issues' && github.event.action == 'opened'
+        env:
+          GH_TOKEN: ${{ secrets.SDD_PROJECT_TOKEN }}
+          SDD_ISSUE: ${{ github.event.issue.number }}
+        run: |
+          bash vendor/ai-sdd-guide/orchestration/tools/sdd-board.sh set --issue "$SDD_ISSUE" --phase backlog
+
+      - name: Issue closed -> done
+        if: steps.token.outputs.available == 'true' && github.event_name == 'issues' && github.event.action == 'closed'
+        env:
+          GH_TOKEN: ${{ secrets.SDD_PROJECT_TOKEN }}
+          SDD_ISSUE: ${{ github.event.issue.number }}
+          SDD_STATE_REASON: ${{ github.event.issue.state_reason }}
+        run: |
+          reason=$(printf '%s' "${SDD_STATE_REASON:-completed}" | tr '[:upper:]' '[:lower:]')
+          bash vendor/ai-sdd-guide/orchestration/tools/sdd-board.sh close --issue "$SDD_ISSUE" --reason "$reason"
+
+      - name: PR event -> board
+        if: steps.token.outputs.available == 'true' && github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.SDD_PROJECT_TOKEN }}
+          SDD_HEAD_REF: ${{ github.head_ref }}
+          SDD_MERGED: ${{ github.event.pull_request.merged }}
+          SDD_ACTION: ${{ github.event.action }}
+        run: |
+          closed=false
+          [ "$SDD_ACTION" = "closed" ] && closed=true
+          bash vendor/ai-sdd-guide/orchestration/tools/sdd-board.sh pr --branch "$SDD_HEAD_REF" --merged "${SDD_MERGED:-false}" --closed "$closed"
