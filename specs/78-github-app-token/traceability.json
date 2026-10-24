@@ -1,0 +1,63 @@
+{
+  "issue": 78,
+  "issue_url": "https://github.com/solvelio/ai-sdd-guide/issues/78",
+  "feature": "78-github-app-token",
+  "entries": [
+    {
+      "issue_ac": "78-AC1",
+      "spec_ac": "SAC-1",
+      "task": "T1",
+      "test": "tests/test_sdd_board.py::test_auth_mode_app_when_app_id_and_key",
+      "status": "in-scope"
+    },
+    {
+      "issue_ac": "78-AC2",
+      "spec_ac": "SAC-2",
+      "task": "T1",
+      "test": "tests/test_sdd_board.py::test_auth_mode_pat_without_app_id",
+      "status": "in-scope"
+    },
+    {
+      "issue_ac": "78-AC3",
+      "spec_ac": "SAC-3",
+      "task": "T1",
+      "test": "tests/test_sdd_board.py::test_auth_mode_none_without_anything",
+      "status": "in-scope"
+    },
+    {
+      "issue_ac": "78-AC4",
+      "spec_ac": "SAC-4",
+      "task": "T2",
+      "test": "tests/test_sdd_board_workflow.py::test_no_expression_interpolation_in_run_scripts",
+      "status": "in-scope"
+    },
+    {
+      "issue_ac": "78-AC5",
+      "spec_ac": "SAC-5",
+      "task": "T4",
+      "test": "tests/test_docs_github_app.py::test_issue_tracker_doc_has_app_section",
+      "status": "in-scope"
+    },
+    {
+      "issue_ac": "78-AC6",
+      "spec_ac": "SAC-6",
+      "task": "T3",
+      "test": "tests/test_sdd_app_secret.py::test_key_never_printed",
+      "status": "in-scope"
+    },
+    {
+      "issue_ac": "78-AC7",
+      "spec_ac": "SAC-7",
+      "task": "T4",
+      "test": "tests/test_docs_github_app.py::test_pat_scope_wording",
+      "status": "in-scope"
+    },
+    {
+      "issue_ac": "78-AC8",
+      "spec_ac": "SAC-8",
+      "task": "T5",
+      "test": "tests/test_self_migration.py::test_board_json_has_app_id",
+      "status": "in-scope"
+    }
+  ]
+}
