@@ -50,6 +50,7 @@ Re-run `/hooks` whenever you update the hook scripts.
 
 ## Dependencies
 
+- `python3` — required: the guard derives the SDD state with `integration/ci/sdd_state.py`
 - `jq` (preferred) or `python3` (fallback) — for JSON parsing
 - `git` — for worktree detection
 

@@ -3,6 +3,9 @@
 # and the board is configured in .sdd/board.json.
 # Board updates need a repo secret SDD_PROJECT_TOKEN (PAT with project access);
 # without it they are skipped with a warning. Tier labels only need the default token.
+# Security: for same-repo PRs the head branch's code runs with SDD_PROJECT_TOKEN.
+# Fork PRs get no secrets (pull_request trigger), so the board is skipped for them.
+# Grant the PAT only the `project` scope.
 name: SDD Board
 on:
   issues:

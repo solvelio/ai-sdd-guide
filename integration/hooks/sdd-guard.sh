@@ -86,6 +86,14 @@ if ! command -v python3 >/dev/null 2>&1; then
 fi
 
 sdd_state="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../ci/sdd_state.py"
+if [ ! -f "$sdd_state" ]; then
+  {
+    echo "SDD: guard の判定スクリプト (../ci/sdd_state.py) が見つかりません。hook をコピーして使っていませんか。"
+    echo "  .claude/settings.json の hook は vendor/ai-sdd-guide/integration/hooks/sdd-guard.sh を直接指してください"
+    echo "  (integration/settings.json.example 参照)。コピーした hook は削除してください。"
+  } >&2
+  exit 2
+fi
 if reason="$(python3 "$sdd_state" guard --root "$target_root" 2>&1)"; then
   exit 0
 fi

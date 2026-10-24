@@ -34,6 +34,7 @@ check_dep() {
 
 check_dep jq jq jq jq || true
 check_dep gh gh gh gh || true
+check_dep python3 python3 python3 python3 || true
 
 # --- Managed: always overwrite ---
 

@@ -160,3 +160,24 @@ def test_update_sh_preserves_guide_token_fallback(tmp_path):
 def test_sdd_job_checkout_does_not_persist_credentials():
     block = _sdd_checkout_block(WORKFLOW.read_text())
     assert re.search(r"^\s+persist-credentials: false$", block, re.M), block
+
+
+def test_pull_request_trigger_includes_label_events():
+    text = WORKFLOW.read_text()
+    assert re.search(r"^on:\n  pull_request:\n    types: \[[^\]]*\blabeled\b[^\]]*\bunlabeled\b", text, re.M) \
+        or re.search(r"types: \[[^\]]*\bunlabeled\b[^\]]*\blabeled\b", text)
+    for t in ("opened", "synchronize", "reopened"):
+        assert t in text.split("jobs:")[0]
+
+
+def test_board_workflows_document_token_scope_and_trust():
+    for p in (ROOT / "integration" / "ci" / "sdd-board.yml",
+              ROOT / ".github" / "workflows" / "sdd-board.yml"):
+        head = p.read_text().split("name: SDD Board")[0]
+        low = head.lower()
+        assert "fork" in low and "project" in low and "head" in low, p
+
+
+def test_update_sh_checks_python3():
+    assert re.search(r"^check_dep python3 python3 python3 python3", UPDATE_SH.read_text(), re.M)
+    assert "python3" in (ROOT / "integration" / "hooks" / "README.md").read_text().split("## Dependencies")[1]

@@ -134,7 +134,7 @@ EOF
 
 if [ -z "$non_exempt" ]; then
   if [ -z "$paths" ] && [ "$tool_name" = "Bash" ] && looks_like_write_bash; then
-    print_context "SDD reminder: this Bash command appears to write files. If it edits source, ensure the branch is t<Tier>/<Issue番号>-<名前> and the spec is frozen (orchestration/tools/sdd-freeze.sh)."
+    print_context "SDD reminder: this Bash command appears to write files. If it edits source, ensure the branch is t<Tier>/<Issue番号>-<名前> and the spec is frozen (vendor/ai-sdd-guide/orchestration/tools/sdd-freeze.sh)."
   fi
   exit 0
 fi
@@ -177,6 +177,10 @@ if ! command -v python3 >/dev/null 2>&1; then
 fi
 
 sdd_state="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../ci/sdd_state.py"
+if [ ! -f "$sdd_state" ]; then
+  deny "SDD: guard の判定スクリプト (../ci/sdd_state.py) が見つかりません。hook をコピーして使っていませんか。hook は vendor/ai-sdd-guide/integration/hooks/codex-sdd-guard.sh を直接指し、コピーした hook は削除してください。"
+  exit 0
+fi
 while IFS= read -r check_root; do
   [ -n "$check_root" ] || continue
   if ! reason="$(python3 "$sdd_state" guard --root "$check_root" 2>&1)"; then

@@ -293,3 +293,15 @@ def test_multi_repo_patch_denies_when_any_root_is_primary_checkout(tmp_path):
     result = _guard(repo, {"tool_name": "apply_patch", "tool_input": {"patch": patch}})
 
     assert "source edits are only allowed from a linked git worktree" in _deny_reason(result)
+
+
+def test_copied_hook_without_ci_dir_denies_with_vendor_hint(tmp_path):
+    import shutil
+    repo, worktree = _make_repo(tmp_path, "t0/1-feature")
+    hooks = tmp_path / "copied" / ".codex" / "hooks"
+    hooks.mkdir(parents=True)
+    shutil.copy(HOOK, hooks / "codex-sdd-guard.sh")
+    payload = {"tool_name": "apply_patch", "tool_input": {"patch": _wt_patch(worktree)}}
+    r = subprocess.run(["bash", str(hooks / "codex-sdd-guard.sh")], cwd=repo,
+                       input=json.dumps(payload), text=True, capture_output=True, env=GIT_ENV)
+    assert "vendor/ai-sdd-guide/integration/hooks" in _deny_reason(r)

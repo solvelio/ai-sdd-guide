@@ -188,3 +188,17 @@ def test_no_file_path_is_allowed(tmp_path):
     )
 
     assert result.returncode == 0
+
+
+def test_copied_hook_without_ci_dir_denies_with_vendor_hint(tmp_path):
+    import shutil
+    repo, worktree = _make_repo(tmp_path, "t0/1-feature")
+    hooks = tmp_path / "copied" / ".claude" / "hooks"
+    hooks.mkdir(parents=True)
+    shutil.copy(HOOK, hooks / "sdd-guard.sh")
+    payload = {"tool_name": "Edit", "tool_input": {"file_path": str(worktree / "src" / "app.py")},
+               "cwd": str(worktree)}
+    r = subprocess.run(["bash", str(hooks / "sdd-guard.sh")], cwd=worktree, input=json.dumps(payload),
+                       text=True, capture_output=True, env=GIT_ENV)
+    assert r.returncode == 2
+    assert "vendor/ai-sdd-guide/integration/hooks" in r.stderr
