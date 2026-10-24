@@ -1,0 +1,12 @@
+{
+  "feature": "99-my-feature",
+  "commit_sha": "0000000000000000000000000000000000000000",
+  "entries": [
+    {
+      "command_type": "lint",
+      "command": "git diff --check",
+      "result": "no output",
+      "test_count": 5
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "issue": 99,
+  "url": "https://github.com/owner/repo/issues/99",
+  "fetched_at": "2026-09-29T00:00:00Z",
+  "raw_body": "## 受入条件\n\n- [ ] first criterion works\n- [ ] second criterion works\n",
+  "body_hash": "49f9de3f0073cf45c66066aae898543b31bb5b7b32c20e33531b4e90a3ba7541",
+  "stable_acs": [
+    {"id": "99-AC1", "text": "first criterion works"},
+    {"id": "99-AC2", "text": "second criterion works"}
+  ]
+}

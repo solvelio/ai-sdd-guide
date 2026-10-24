@@ -6,6 +6,6 @@
 
 **RED確認コマンド:**
 ```bash
-bash integration/ci/sdd-validate.sh --root tests/fixtures/fixture-invalid-evidence-commit
+bash integration/ci/sdd-validate.sh --root tests/fixtures/fixture-invalid-evidence-commit --branch t2/99-my-feature
 # → exit 1, stderr に "commit_sha not found in git repository" が含まれる
 ```

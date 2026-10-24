@@ -1,9 +1,0 @@
-{
-  "issue": 99,
-  "issue_url": "https://github.com/owner/repo/issues/99",
-  "feature": "my-feature",
-  "entries": [
-    {"issue_ac": "99-AC1", "spec_ac": "SAC-1", "task": "T1", "test": "tests/test_my_feature.py::test_something", "status": "in-scope"},
-    {"issue_ac": "99-AC2", "spec_ac": "SAC-2", "task": "T2", "test": "tests/test_my_feature.py::test_something_else", "status": "in-scope"}
-  ]
-}

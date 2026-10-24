@@ -6,6 +6,6 @@
 
 **RED確認コマンド:**
 ```bash
-bash integration/ci/sdd-validate.sh --root tests/fixtures/fixture-scope-out-no-followup
+bash integration/ci/sdd-validate.sh --root tests/fixtures/fixture-scope-out-no-followup --branch t2/99-my-feature
 # → exit 1, stderr に "missing HTTP(S) followup_issue" が含まれる
 ```

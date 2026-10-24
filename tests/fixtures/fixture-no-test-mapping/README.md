@@ -6,6 +6,6 @@
 
 **RED確認コマンド:**
 ```bash
-bash integration/ci/sdd-validate.sh --root tests/fixtures/fixture-no-test-mapping
+bash integration/ci/sdd-validate.sh --root tests/fixtures/fixture-no-test-mapping --branch t2/99-my-feature
 # → exit 1, stderr に "test file not found" が含まれる
 ```
