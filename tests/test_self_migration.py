@@ -38,10 +38,4 @@ def test_validator_passes_for_this_feature():
         ["bash", str(ROOT / "integration" / "ci" / "sdd-validate.sh"),
          "--root", str(ROOT), "--branch", "t2/" + FEATURE],
         capture_output=True, text=True)
-    if (ROOT / "specs" / FEATURE / "evidence.json").exists():
-        assert r.returncode == 0, r.stderr
-    else:
-        # evidence.json is a verify-phase artifact; nothing else may fail.
-        assert r.returncode == 1, r.stderr
-        errors = [l for l in r.stderr.splitlines() if l.startswith("ERROR:")]
-        assert len(errors) == 1 and "evidence.json not found" in errors[0], r.stderr
+    assert r.returncode == 0, r.stderr
