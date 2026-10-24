@@ -60,17 +60,14 @@ class Env:
         return [c for c in self.joined() if "-X PUT" in c]
 
 
-def table(repo="solvelio/x", app_id="42", board_app_id="42", installed=True, inst_app=42):
-    t = {
+def table(repo="solvelio/x", board_app_id="42", selection="all"):
+    org = repo.split("/")[0]
+    return {
         RAW % repo: {"stdout": "%s\n" % board_app_id if board_app_id is not None else "null\n"},
-        "api --paginate /user/installations": {"stdout": "7\n" if inst_app == 42 else ""},
-        "api repos/%s --jq .id" % repo: {"stdout": "555\n"},
-        "api --paginate /user/installations/7/repositories":
-            {"stdout": ("%s\n" % repo) if installed else "solvelio/other\n"},
-        "api -X PUT /user/installations/7/repositories/555": {"stdout": ""},
+        "api --paginate /orgs/%s/installations" % org:
+            {"stdout": ("%s\n" % selection) if selection else ""},
         "secret set SDD_APP_PRIVATE_KEY -R %s" % repo: {"stdout": ""},
     }
-    return t
 
 
 class SddAppSecretTest(unittest.TestCase):
@@ -95,16 +92,6 @@ class SddAppSecretTest(unittest.TestCase):
             self.assertNotIn(line, r.stdout)
             self.assertNotIn(line, r.stderr)
 
-    def test_installs_repo_when_missing(self):
-        r = self.env.run(table(installed=False), ["--op-ref", REF, "solvelio/x"])
-        self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual(self.env.puts(), ["api -X PUT /user/installations/7/repositories/555"])
-
-    def test_second_run_does_not_reinstall(self):
-        r = self.env.run(table(installed=True), ["--op-ref", REF, "solvelio/x"])
-        self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual(self.env.puts(), [])
-
     def test_app_id_from_board_json(self):
         r = self.env.run(table(), ["--op-ref", REF, "solvelio/x"])
         self.assertEqual(r.returncode, 0, r.stderr)
@@ -116,7 +103,7 @@ class SddAppSecretTest(unittest.TestCase):
         self.assertEqual(self.env.secret_sets(), [])
 
     def test_app_installation_not_found_fails(self):
-        r = self.env.run(table(inst_app=0), ["--op-ref", REF, "solvelio/x"])
+        r = self.env.run(table(selection=""), ["--op-ref", REF, "solvelio/x"])
         self.assertEqual(r.returncode, 1)
         self.assertEqual(self.env.secret_sets(), [])
 
@@ -136,7 +123,7 @@ class SddAppSecretTest(unittest.TestCase):
         self.assertEqual(self.env.secret_sets(), ["secret set SDD_APP_PRIVATE_KEY -R solvelio/x"])
 
     def test_dry_run_changes_nothing(self):
-        r = self.env.run(table(installed=False), ["--op-ref", REF, "--dry-run", "solvelio/x"])
+        r = self.env.run(table(), ["--op-ref", REF, "--dry-run", "solvelio/x"])
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(self.env.puts(), [])
         self.assertEqual(self.env.secret_sets(), [])
@@ -157,8 +144,38 @@ class SddAppSecretTest(unittest.TestCase):
     def test_uses_paginate_for_installation_lists(self):
         self.env.run(table(), ["--op-ref", REF, "solvelio/x"])
         pag = [c for c in self.env.calls() if "--paginate" in c]
-        self.assertTrue(any("/user/installations" in c for c in pag))
-        self.assertTrue(any("/user/installations/7/repositories" in " ".join(c) for c in pag))
+        self.assertTrue(any("/orgs/solvelio/installations" in c for c in pag))
+
+    def test_selected_installation_fails_with_guidance(self):
+        r = self.env.run(table(selection="selected"), ["--op-ref", REF, "solvelio/x"])
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("All repositories", r.stdout + r.stderr)
+        self.assertEqual(self.env.secret_sets(), [])
+
+    def test_never_calls_user_installations_or_put(self):
+        self.env.run(table(), ["--op-ref", REF, "solvelio/x"])
+        for c in self.env.joined():
+            self.assertNotIn("/user/installations", c)
+            self.assertNotIn("PUT", c)
+
+    def test_mixed_owners_fail(self):
+        r = self.env.run(table(), ["--op-ref", REF, "solvelio/x", "other/y"])
+        self.assertEqual(r.returncode, 1)
+        self.assertEqual(self.env.secret_sets(), [])
+
+    def test_public_key_or_cert_rejected(self):
+        for out in ("-----BEGIN PUBLIC KEY-----\nabc\n-----END PUBLIC KEY-----\n",
+                    "-----BEGIN CERTIFICATE-----\nabc\n-----END CERTIFICATE-----\n"):
+            r = self.env.run(table(), ["--op-ref", REF, "solvelio/x"], op_output=out)
+            self.assertEqual(r.returncode, 1)
+            self.assertEqual(self.env.secret_sets(), [])
+
+    def test_secret_set_failure_names_repo(self):
+        t = table()
+        t["secret set SDD_APP_PRIVATE_KEY -R solvelio/x"] = {"stderr": "boom", "code": 1}
+        r = self.env.run(t, ["--op-ref", REF, "solvelio/x"])
+        self.assertEqual(r.returncode, 2)
+        self.assertIn("solvelio/x", r.stderr)
 
     def test_bad_args_exit_1(self):
         r = self.env.run(table(), ["solvelio/x"])
