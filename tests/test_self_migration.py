@@ -23,6 +23,11 @@ def test_board_json_present():
     assert isinstance(data["project"], int) and not isinstance(data["project"], bool)
 
 
+def test_board_json_has_app_id():
+    data = json.loads((ROOT / ".sdd" / "board.json").read_text(encoding="utf-8"))
+    assert isinstance(data["app_id"], int) and not isinstance(data["app_id"], bool)
+
+
 def test_board_workflow_present():
     wf = ROOT / ".github" / "workflows" / "sdd-board.yml"
     assert wf.is_file()
