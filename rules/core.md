@@ -14,9 +14,10 @@ Canonical, always-loaded rules. Terse + imperative. Rationale lives in `docs/` (
 - When stuck (spec wrong or insufficient, blocked), comment the reason on the Issue and STOP. Escalate to a human. Never silently redesign during implementation.
 - Tier 2: every Issue AC must appear in `specs/<feature>/traceability.json` before freeze.
   If any Issue AC is untracked, STOP — do not freeze and do not implement.
-- Frozen artifacts (`spec.md`, `plan.md`, `tasks.md`, `traceability.json`) are immutable after freeze.
+- Freeze targets: Tier 2 freezes `spec.md`, `plan.md`, `tasks.md`, `traceability.json`; Tier 1 freezes `spec.md` only.
+- Frozen artifacts (Tier 2: `spec.md`, `plan.md`, `tasks.md`, `traceability.json`; Tier 1: `spec.md`) are immutable after freeze.
   The only permitted post-freeze edit to `tasks.md` is checkbox state ([ ] → [x]).
-  Any other post-freeze change (including `traceability.json`) requires explicit unfreeze: human approval, then re-run `orchestration/tools/sdd-freeze.sh` to recreate `freeze.json`.
+  Any other post-freeze change (including `traceability.json`) requires explicit unfreeze: human approval, then re-run `vendor/ai-sdd-guide/orchestration/tools/sdd-freeze.sh` to recreate `freeze.json`.
 
 ## Never
 - Never edit source code during spec/plan/tasks phases (only specs/docs).

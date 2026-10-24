@@ -9,7 +9,7 @@ SDD status is derived from the branch name `t<Tier>/<Issue番号>-<名前>` and 
 `specs/<feature>/` (`python3 vendor/ai-sdd-guide/integration/ci/sdd_state.py phase`). The board
 only displays it: GitHub Projects (one board per account, one card per Issue, single-select
 field `Phase`: backlog → brainstorm → spec → plan → tasks → implement → verify → done),
-configured in `.sdd/board.json` and updated with `orchestration/tools/sdd-board.sh` and
+configured in `.sdd/board.json` and updated with `vendor/ai-sdd-guide/orchestration/tools/sdd-board.sh` and
 `integration/ci/sdd-board.yml`. GitLab and Azure DevOps boards are tracked in #71 and #72;
 Bitbucket is out of scope (its Issues are being sunset).
 
@@ -20,12 +20,12 @@ Bitbucket is out of scope (its Issues are being sunset).
   and stop.
 - Every piece of work needs an Issue, Tier 0 included. On starting an issue, create the
   branch `t<Tier>/<Issue番号>-<名前>` (spec directory `specs/<Issue番号>-<名前>/`). At every
-  phase boundary: commit → `orchestration/tools/sdd-board.sh sync` → stop — this is the
+  phase boundary: commit → `vendor/ai-sdd-guide/orchestration/tools/sdd-board.sh sync` → stop — this is the
   orchestration stop rule (`orchestration/rules/orchestration.md`).
 - If stuck, comment the reason on the Issue and stop.
 - Run the Tier-appropriate flow (see `rules/workflow.md`):
   - Tier 0 — implement → PR (still with an Issue and a `t0/` branch).
-  - Tier 1 — lightweight spec → implement → PR.
+  - Tier 1 — lightweight spec → human approval → `vendor/ai-sdd-guide/orchestration/tools/sdd-freeze.sh` (freezes `spec.md`) → `handoff.md` → implement → PR. CI requires `freeze.json` and `handoff.md` on Tier 1 PRs.
   - Tier 2 — spec → plan → tasks → implement → verify → PR.
 - Link the PR back to the issue so merging closes it: `closes #N` (GitHub / GitLab /
   Bitbucket) or `AB#N` (Azure DevOps).

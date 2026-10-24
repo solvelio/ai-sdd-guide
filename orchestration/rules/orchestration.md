@@ -44,14 +44,14 @@ If stuck at any point, comment the reason on the Issue and stop.
   a diff summary comparing the original Issue body to the frozen spec. Explicitly
   document what changed, what was dropped, and why. This is mandatory for Tier 2.
 - At end of tasks phase, generate `specs/<feature>/handoff.md` from `orchestration/templates/handoff.md.example`.
-- Commit, run `orchestration/tools/sdd-board.sh sync`, and stop.
+- Commit, run `vendor/ai-sdd-guide/orchestration/tools/sdd-board.sh sync`, and stop.
 
 ## Rules for implementation agents
 
 - Read `specs/<feature>/handoff.md` before touching any code.
 - Implement exactly the tasks in `specs/<feature>/tasks.md`. No more, no less.
 - Do NOT modify files under `specs/` (except checking boxes in `tasks.md`) or `orchestration/`.
-- When complete, commit, run `orchestration/tools/sdd-board.sh sync`, and stop.
+- When complete, commit, run `vendor/ai-sdd-guide/orchestration/tools/sdd-board.sh sync`, and stop.
 - If the spec is wrong, ambiguous, or insufficient:
   1. Stop immediately.
   2. Comment the reason on the Issue.

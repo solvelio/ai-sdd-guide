@@ -22,7 +22,7 @@ Capture each skill's output into the portable `specs/<feature>/` artifacts.
    manually): all Issue ACs are tracked, no orphaned out-of-scope entries exist.
    When presenting for human approval, include a diff summary of Issue ACs vs
    frozen spec ACs — not just the design body.
-4. Freeze — after human approval, run `orchestration/tools/sdd-freeze.sh`; it writes `specs/<feature>/freeze.json` (target files + hashes). This is the handoff gate to other agents. To redo a freeze, get human approval again and re-run the command.
+4. Freeze — after human approval, run `vendor/ai-sdd-guide/orchestration/tools/sdd-freeze.sh`; it writes `specs/<feature>/freeze.json` (target files + hashes). This is the handoff gate to other agents. To redo a freeze, get human approval again and re-run the command.
    STOP. Do not begin implementation in the same session as freeze.
    Wait for an explicit instruction to implement before proceeding.
 
@@ -33,7 +33,7 @@ For exploration/parallelism use skills `dispatching-parallel-agents` / `subagent
 - Map every acceptance criterion to a passing test.
 - When Claude implements: use skills `executing-plans` + `test-driven-development` (RED-GREEN-REFACTOR) + `systematic-debugging`. Other agents follow `tasks.md` directly.
 - If the spec is wrong, ambiguous, or insufficient: STOP and escalate. Do not redesign.
-- When implementation is complete: check every box in `tasks.md` (Tier 2); the phase becomes `verify` automatically. Commit, then run `orchestration/tools/sdd-board.sh sync` and stop (see `orchestration/rules/orchestration.md`).
+- When implementation is complete: check every box in `tasks.md` (Tier 2); the phase becomes `verify` automatically. Commit, then run `vendor/ai-sdd-guide/orchestration/tools/sdd-board.sh sync` and stop (see `orchestration/rules/orchestration.md`).
 
 ## Verify phase (superpowers required)
 - Skill `verification-before-completion`. Run tests; spawn the `sdd-reviewer` subagent to check conformance to the frozen spec.
@@ -52,7 +52,7 @@ For exploration/parallelism use skills `dispatching-parallel-agents` / `subagent
 
 ## Tier exemptions
 - Tier 0: hooks and CI skip the spec requirement.
-- Tier 1: lightweight spec required; plan/tasks skipped.
+- Tier 1: lightweight spec required; plan/tasks skipped. Flow: lightweight spec → human approval → `vendor/ai-sdd-guide/orchestration/tools/sdd-freeze.sh` (freezes `spec.md` only) → `handoff.md` → implement → PR. CI requires `freeze.json` and `handoff.md` on Tier 1 PRs.
 - Tier 2: nothing skipped.
 - Exemptions are declared by the branch name (`t0/`, `t1/`) + the matching PR label, so hooks/CI can verify them.
 

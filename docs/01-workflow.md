@@ -38,7 +38,7 @@
 
 ## 省略の基準
 - Tier 0：spec不要（hooks/CIも免除）。
-- Tier 1：軽量spec必須、plan/tasks省略可。
+- Tier 1：軽量spec必須、plan/tasks省略可。流れは 軽量spec → 人間の承認 → `sdd-freeze.sh`（`spec.md` を凍結）→ `handoff.md` → 実装 → PR。PR では CI が `freeze.json` と `handoff.md` を求める。
 - Tier 2：省略しない。
 
 「小さいから省く」判断はブランチ名（`t0/`・`t1/`）と PRラベルで宣言し、後から検証できる形にする。
