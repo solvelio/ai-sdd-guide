@@ -1,0 +1,42 @@
+{
+  "feature": "78-github-app-token",
+  "commit_sha": "ec6426ca1142d06b21e4fb6f5c864be8942e9b08",
+  "entries": [
+    {
+      "command_type": "test",
+      "command": "python -m pytest tests/ -q",
+      "result": "316 passed in 8.63s",
+      "test_count": 316
+    },
+    {
+      "command_type": "other",
+      "command": "bash integration/ci/sdd-validate.sh --root . --pr --branch t2/78-github-app-token --pr-labels sdd:tier-2,enhancement",
+      "result": "sdd-validate: all checks passed for feature '78-github-app-token'",
+      "test_count": null
+    },
+    {
+      "command_type": "other",
+      "command": "python3 integration/ci/sdd_state.py phase",
+      "result": "verify (freeze.json valid)",
+      "test_count": null
+    },
+    {
+      "command_type": "other",
+      "command": "sdd-reviewer (updated checklist)",
+      "result": "PASS: SAC-1..8 met. Ruling accepted by human: sdd-app-secret.sh --all excludes archived repos (--no-archived), narrower than spec; archived repos cannot take secrets",
+      "test_count": null
+    },
+    {
+      "command_type": "other",
+      "command": "sdd-app-secret.sh on macOS (human)",
+      "result": "SDD_APP_PRIVATE_KEY set on solvelio/ai-sdd-guide; App installation repository_selection=all",
+      "test_count": null
+    },
+    {
+      "command_type": "other",
+      "command": "PR #79 CI: SDD Board workflow run 40118438065 (pull_request opened)",
+      "result": "auth-mode=app; actions/create-github-app-token@v2 created the installation token; PR board step succeeded with no sdd-board warnings; board item #78 phase=verify on solvelio Project #1",
+      "test_count": null
+    }
+  ]
+}

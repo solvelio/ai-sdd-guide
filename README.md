@@ -57,12 +57,12 @@ bash vendor/ai-sdd-guide/orchestration/tools/sdd-board.sh init
 # 今のブランチの Issue のカードのフェーズを更新
 bash vendor/ai-sdd-guide/orchestration/tools/sdd-board.sh sync
 
-# Actions で自動更新する場合（secret SDD_PROJECT_TOKEN: classic PAT、project スコープ）
+# Actions で自動更新する場合（GitHub App の鍵 SDD_APP_PRIVATE_KEY。予備として secret SDD_PROJECT_TOKEN: classic PAT、`repo`（private リポジトリの場合）・`project`・`read:org`）。手順は docs/04-issue-tracker.md
 mkdir -p .github/workflows
 cp vendor/ai-sdd-guide/integration/ci/sdd-board.yml .github/workflows/
 ```
 
-設定は `.sdd/board.json`（`owner`・`project`・`tier0_branch_prefixes`）。GitLab・Azure DevOps は #71・#72、Bitbucket は Issues 廃止のため対象外。
+設定は `.sdd/board.json`（`owner`・`project`・`app_id`・`tier0_branch_prefixes`）。GitLab・Azure DevOps は #71・#72、Bitbucket は Issues 廃止のため対象外。
 
 ## 機能単位カタログ
 

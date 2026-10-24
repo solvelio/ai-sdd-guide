@@ -1,10 +1,13 @@
 # Keeps the GitHub Projects board in sync on Issue / PR events.
 # Self-hosted copy of integration/ci/sdd-board.yml for this repo (no submodule).
-# Board updates need a repo secret SDD_PROJECT_TOKEN (PAT with project access);
-# without it they are skipped with a warning. Tier labels only need the default token.
-# Security: for same-repo PRs the head branch's code runs with SDD_PROJECT_TOKEN.
+# Board token, chosen in order by `sdd_board.py auth-mode`:
+#   1. GitHub App (repo secret SDD_APP_PRIVATE_KEY + app_id in .sdd/board.json): an installation
+#      token is created per run. If it cannot be created, the job fails (no silent fallback).
+#   2. PAT (repo secret SDD_PROJECT_TOKEN): classic, `repo` (private repos), `project`, `read:org`.
+#   3. Neither: board updates are skipped with a warning.
+# Tier labels only need the default token.
+# Security: for same-repo PRs the head branch's code runs with the board token.
 # Fork PRs get no secrets (pull_request trigger), so the board is skipped for them.
-# Grant the PAT only the `project` scope.
 name: SDD Board
 on:
   issues:
@@ -26,17 +29,13 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
 
-      - name: Check project token
-        id: token
+      - name: Choose board token
+        id: auth
         env:
-          SDD_PROJECT_TOKEN: ${{ secrets.SDD_PROJECT_TOKEN }}
+          SDD_HAS_APP_KEY: ${{ secrets.SDD_APP_PRIVATE_KEY != '' }}
+          SDD_HAS_PAT: ${{ secrets.SDD_PROJECT_TOKEN != '' }}
         run: |
-          if [ -z "$SDD_PROJECT_TOKEN" ]; then
-            echo "::warning::SDD_PROJECT_TOKEN is not set; skipping board update."
-            echo "available=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          echo "available=true" >> "$GITHUB_OUTPUT"
+          python3 integration/ci/sdd_board.py auth-mode --has-app-key "$SDD_HAS_APP_KEY" --has-pat "$SDD_HAS_PAT" >> "$GITHUB_OUTPUT"
 
       - name: Add tier label to PR
         if: github.event_name == 'pull_request' && github.event.action != 'closed'
@@ -54,18 +53,28 @@ jobs:
           gh label create "$label" --force >/dev/null 2>&1 || true
           gh pr edit "$SDD_PR" --add-label "$label" || echo "::warning::could not add label $label"
 
+      - name: Create App token
+        id: app
+        if: steps.auth.outputs.mode == 'app'
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ steps.auth.outputs.app_id }}
+          private-key: ${{ secrets.SDD_APP_PRIVATE_KEY }}
+          owner: ${{ steps.auth.outputs.owner }}
+          repositories: ${{ github.event.repository.name }}
+
       - name: Issue opened -> backlog
-        if: steps.token.outputs.available == 'true' && github.event_name == 'issues' && github.event.action == 'opened'
+        if: (steps.auth.outputs.mode == 'app' || steps.auth.outputs.mode == 'pat') && github.event_name == 'issues' && github.event.action == 'opened'
         env:
-          GH_TOKEN: ${{ secrets.SDD_PROJECT_TOKEN }}
+          GH_TOKEN: ${{ steps.app.outputs.token || secrets.SDD_PROJECT_TOKEN }}
           SDD_ISSUE: ${{ github.event.issue.number }}
         run: |
           bash orchestration/tools/sdd-board.sh set --issue "$SDD_ISSUE" --phase backlog
 
       - name: Issue closed -> done
-        if: steps.token.outputs.available == 'true' && github.event_name == 'issues' && github.event.action == 'closed'
+        if: (steps.auth.outputs.mode == 'app' || steps.auth.outputs.mode == 'pat') && github.event_name == 'issues' && github.event.action == 'closed'
         env:
-          GH_TOKEN: ${{ secrets.SDD_PROJECT_TOKEN }}
+          GH_TOKEN: ${{ steps.app.outputs.token || secrets.SDD_PROJECT_TOKEN }}
           SDD_ISSUE: ${{ github.event.issue.number }}
           SDD_STATE_REASON: ${{ github.event.issue.state_reason }}
         run: |
@@ -73,9 +82,9 @@ jobs:
           bash orchestration/tools/sdd-board.sh close --issue "$SDD_ISSUE" --reason "$reason"
 
       - name: PR event -> board
-        if: steps.token.outputs.available == 'true' && github.event_name == 'pull_request'
+        if: (steps.auth.outputs.mode == 'app' || steps.auth.outputs.mode == 'pat') && github.event_name == 'pull_request'
         env:
-          GH_TOKEN: ${{ secrets.SDD_PROJECT_TOKEN }}
+          GH_TOKEN: ${{ steps.app.outputs.token || secrets.SDD_PROJECT_TOKEN }}
           SDD_HEAD_REF: ${{ github.head_ref }}
           SDD_MERGED: ${{ github.event.pull_request.merged }}
           SDD_ACTION: ${{ github.event.action }}

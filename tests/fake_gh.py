@@ -9,6 +9,9 @@ import sys
 args = sys.argv[1:]
 with open(os.environ["FAKE_GH_LOG"], "a", encoding="utf-8") as f:
     f.write(json.dumps(args) + "\n")
+if args[:2] == ["secret", "set"] and os.environ.get("FAKE_GH_STDIN"):
+    with open(os.environ["FAKE_GH_STDIN"], "a", encoding="utf-8") as f:
+        f.write(sys.stdin.read())
 table = json.load(open(os.environ["FAKE_GH_RESPONSES"], encoding="utf-8"))
 line = " ".join(args)
 best = None

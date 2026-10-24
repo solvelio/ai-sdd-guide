@@ -10,10 +10,55 @@ SDD のステータスは、ブランチ名 `t<Tier>/<Issue番号>-<名前>` と
 
 - ボード: GitHub Projects（アカウントで 1 枚、1 Issue = 1 カード）。列は単一選択フィールド `Phase`:
   backlog → brainstorm → spec → plan → tasks → implement → verify → done。
-- 設定: `.sdd/board.json`（`owner`・`project`・`tier0_branch_prefixes`）。Actions の secret は `SDD_PROJECT_TOKEN`
-  （classic PAT、`project` スコープ）。
+- 設定: `.sdd/board.json`（`owner`・`project`・`app_id`・`tier0_branch_prefixes`）。Actions の secret は
+  `SDD_APP_PRIVATE_KEY`（GitHub App の鍵）。予備として `SDD_PROJECT_TOKEN`（classic PAT、`repo`（private リポジトリの場合）・`project`・`read:org`）も使える。
+  App があれば App、なければ PAT、どちらもなければ警告して更新を飛ばす。App を設定したのにトークンが作れないときはジョブが失敗する。
 - 更新: 手元は `orchestration/tools/sdd-board.sh sync`、CI は `integration/ci/sdd-board.yml`。
 - GitLab と Azure DevOps のボードは [#71]・[#72] で扱う。Bitbucket は Issues 廃止のため対象外。
+
+## GitHub App で動かす
+
+ボードの更新を個人の PAT ではなく GitHub App で行う。トークンは実行のたびに作られ、短時間で失効する。
+
+### App を作る
+
+1. Organization の Settings → Developer settings → GitHub Apps → New GitHub App。
+2. **Webhook** の「Active」のチェックを外す。
+3. 権限を次のとおりにする。
+   - Organization permissions → Projects: **Read and write**
+   - Repository permissions → Issues / Pull requests / Metadata: **Read-only**
+4. 作ったら、Organization にインストールする。リポジトリのアクセスは **All repositories** を選ぶ。新しいリポジトリも自動で対象に入る。
+5. App の画面で App ID を控える（`board.json` の `app_id` に使う）。
+
+### 鍵を作り、1Password に保管する
+
+1. App の設定画面で「Generate a private key」を押し、ダウンロードされた `.pem` を 1Password に入れる。
+2. ダウンロードした `.pem` のファイルは消す。鍵はどこにも貼らない。
+
+### 各リポジトリに設定する
+
+1. `.sdd/board.json` に `app_id`（App ID の整数）を書き、PR で入れる。`owner`・`project` も要る。
+2. 鍵をリポジトリの secret `SDD_APP_PRIVATE_KEY` に配る。GitHub Free では private リポジトリが Organization の secret を読めないため、リポジトリごとの secret に入れる。Mac で `op` を 1Password アプリと連携させ、自分の `gh` でログインした状態で実行する。
+
+```bash
+# 1 つ、または複数のリポジトリ
+bash vendor/ai-sdd-guide/orchestration/tools/sdd-app-secret.sh \
+  --op-ref "op://<Vault>/<Item>/<field>" OWNER/NAME [OWNER/NAME ...]
+# Organization の全リポジトリ
+bash vendor/ai-sdd-guide/orchestration/tools/sdd-app-secret.sh \
+  --op-ref "op://<Vault>/<Item>/<field>" --all --org ORG
+```
+
+`--dry-run` で配る先だけを確かめられる。`--app-id N` は、インストールの確認に使う App ID を直接指定する（省略すると各リポジトリの `board.json` の `app_id` を使う）。`app_id` は既定ブランチの `board.json` から読むので、board.json の PR を先にマージしてから実行するか、`--app-id` を渡す。`board.json` に `app_id` がないリポジトリには鍵を配っても、`app_id` をマージするまでそのリポジトリの SDD Board ワークフローは失敗する（鍵があって `app_id` がない設定は誤りとして扱われる）。スクリプトは警告を出し、`--all` では最後に該当リポジトリを一覧する。アーカイブ済みのリポジトリは `--all` の対象外。スクリプトは、App が **All repositories** にインストールされているかを確かめ、そうでなければ案内を出して止まる。リポジトリを App のインストールに足すことはしない。
+
+### リポジトリを足すとき
+
+1. `.sdd/board.json`（`owner`・`project`・`app_id`）を PR で置き、**マージする**（スクリプトは既定ブランチから `app_id` を読む。マージ前に実行するなら `--app-id` を渡す）。
+2. そのリポジトリに対して `sdd-app-secret.sh` を 1 回実行する。
+
+### 予備の PAT
+
+`SDD_PROJECT_TOKEN` は予備。classic PAT で、`repo`（private リポジトリの場合）・`project`・`read:org` を付ける。fine-grained PAT は user 所有の Projects を操作できない。
 
 ## プラットフォーム機能マッピング
 

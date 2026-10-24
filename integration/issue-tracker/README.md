@@ -6,7 +6,7 @@ the label, dependency-link, and PR-link mechanisms differ. See `rules/issue-inta
 
 **Status is derived from the branch name and `specs/`; the board only displays it.** The GitHub
 Projects board is implemented (`orchestration/tools/sdd-board.sh`, `integration/ci/sdd-board.yml`,
-config `.sdd/board.json`, Actions secret `SDD_PROJECT_TOKEN`). GitLab and Azure DevOps boards are
+config `.sdd/board.json`, Actions secret `SDD_APP_PRIVATE_KEY` for a GitHub App, or `SDD_PROJECT_TOKEN` as a fallback: classic PAT with `repo` (for private repositories), `project`, `read:org`; see `docs/04-issue-tracker.md`). GitLab and Azure DevOps boards are
 tracked in #71 and #72; Bitbucket is out of scope (its Issues are being sunset).
 
 ## Branch protection (all platforms)

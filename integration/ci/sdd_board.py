@@ -21,6 +21,8 @@ from sdd_state import (  # noqa: E402
 BOARD_FILE = Path(".sdd") / "board.json"
 BIG_LIMIT = "10000"
 CLOSE_REASONS = ("completed", "not_planned", "duplicate")
+SCOPE_MARKERS = ("missing required scopes", "INSUFFICIENT_SCOPES",
+                 "Resource not accessible by integration")
 
 
 class GhError(Exception):
@@ -42,7 +44,10 @@ def run_gh(args: List[str]) -> str:
         raise GhError("gh を実行できません")
     if r.returncode != 0:
         sub = " ".join(a for a in args[:2] if not a.startswith("-"))
-        raise GhError("gh %s が失敗しました (終了コード %d)" % (sub, r.returncode))
+        msg = "gh %s が失敗しました (終了コード %d)" % (sub, r.returncode)
+        if any(m in (r.stderr or "") for m in SCOPE_MARKERS):
+            msg += "。トークンの権限が足りない可能性があります"
+        raise GhError(msg)
     return r.stdout
 
 
@@ -65,6 +70,9 @@ def load_board(root: Path) -> Dict[str, Any]:
         raise BoardError("%s を読めません" % BOARD_FILE)
     if not isinstance(owner, str) or isinstance(project, bool) or not isinstance(project, int):
         raise BoardError("%s の owner / project の型が正しくありません" % BOARD_FILE)
+    app_id = data.get("app_id")
+    if app_id is not None and (isinstance(app_id, bool) or not isinstance(app_id, int)):
+        raise BoardError("%s の app_id は整数で指定してください" % BOARD_FILE)
     return data
 
 
@@ -226,12 +234,52 @@ def cmd_init(root: Path, args) -> int:
         Board(owner, project).import_open()
     except (GhError, BoardError) as e:
         print("sdd-board: error: %s" % e, file=sys.stderr)
-        print("sdd-board: gh に project スコープがあるか確認してください "
-              "(gh auth refresh -s project)", file=sys.stderr)
+        print("sdd-board: gh の権限を確認してください "
+              "(classic PAT なら repo（private リポジトリの場合）・project・read:org。"
+              "gh auth refresh -s project,read:org)", file=sys.stderr)
         return 1
     except Exception as e:  # noqa: BLE001 - unexpected gh output etc.
         print("sdd-board: error: 予期しないエラー (%s)" % type(e).__name__, file=sys.stderr)
         return 1
+    return 0
+
+
+def cmd_auth_mode(root: Path, args) -> int:
+    """Decide which board token to use. Never calls gh."""
+    has_key, has_pat = args.has_app_key == "true", args.has_pat == "true"
+    app_id, owner = "", ""
+    try:
+        if (root / BOARD_FILE).is_file():
+            data = load_board(root)
+            owner = data["owner"]
+            if data.get("app_id") is not None:
+                app_id = str(data["app_id"])
+            board_found = True
+        else:
+            board_found = False
+    except BoardError as e:
+        print("::error::%s" % e, file=sys.stderr)
+        print("mode=error")
+        return 1
+    if not board_found:
+        mode, why = "none", "%s がないため、ボードの手順を飛ばします" % BOARD_FILE
+    elif app_id and has_key:
+        mode, why = "app", ""
+    elif has_key:
+        print("::error::SDD_APP_PRIVATE_KEY があるのに %s に app_id がありません" % BOARD_FILE,
+              file=sys.stderr)
+        print("mode=error")
+        return 1
+    elif has_pat:
+        mode, why = "pat", ""
+    else:
+        mode, why = "none", ("SDD_APP_PRIVATE_KEY も SDD_PROJECT_TOKEN もないため、"
+                             "ボードの手順を飛ばします")
+    if mode == "none":
+        print("::warning::%s" % why, file=sys.stderr)
+    print("mode=%s" % mode)
+    print("app_id=%s" % app_id)
+    print("owner=%s" % owner)
     return 0
 
 
@@ -257,11 +305,16 @@ def main(argv: Optional[List[str]] = None) -> int:
     add("pr", ("--branch", {"required": True}),
         ("--merged", {"required": True, "choices": ["true", "false"]}),
         ("--closed", {"required": True, "choices": ["true", "false"]}))
+    add("auth-mode",
+        ("--has-app-key", {"required": True, "choices": ["true", "false"]}),
+        ("--has-pat", {"required": True, "choices": ["true", "false"]}))
     args = ap.parse_args(argv)
     root = root_from(args.root)
 
     if args.cmd == "init":
         return cmd_init(root, args)
+    if args.cmd == "auth-mode":
+        return cmd_auth_mode(root, args)
     _CWD = root
     try:
         data = load_board(root)

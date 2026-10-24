@@ -1,0 +1,41 @@
+{
+  "issue": 78,
+  "url": "https://github.com/solvelio/ai-sdd-guide/issues/78",
+  "fetched_at": "2026-10-24T15:43:30Z",
+  "raw_body": "## 背景\nボードを Organization `solvelio` の Project に移した（#76）。いまの `sdd-board.yml` は classic PAT（`SDD_PROJECT_TOKEN`、`repo`・`project`・`read:org`）で動いているが、PAT は期限切れで黙ってボード更新が止まる、権限が広すぎる（全リポジトリのコードを書き換えられる）、個人アカウントに紐づく、という問題がある。\n\nGitHub App は Organization の Projects を操作でき、トークンに期限がなく、権限を絞れる。Free プランでは private リポジトリが Organization の secret を読めないため、App の ID と秘密鍵はリポジトリごとに置く必要がある。\n\n## 方針（案）\n- ワークフローは `actions/create-github-app-token` でインストールトークンを作り、ボードの手順に渡す\n- App の資格情報があれば App、なければ `SDD_PROJECT_TOKEN`（PAT）、どちらもなければ警告して成功、の順にする（移行期間の互換）\n- App に必要な権限と、作成・インストールの手順を docs に書く\n- `.sdd/board.json` を持つリポジトリに secret をまとめて入れるスクリプトを用意する（値は環境変数かファイルから渡し、画面に出さない）\n- #75（スコープの記載不足と、gh の失敗理由が分からない件）も合わせて直す\n\n## 受入条件\n- [ ] App の資格情報（secret 名は設計で決める）があるとき、`sdd-board.yml` は App のインストールトークンでボードを更新する\n- [ ] App の資格情報がなく `SDD_PROJECT_TOKEN` があるときは、PAT で今までどおり動く\n- [ ] どちらもないときは警告して成功で終わる\n- [ ] ワークフローの `run:` に `${{ }}` を埋め込まない（既存の方針どおり）\n- [ ] App の作成手順（権限: Organization の Projects 読み書き、リポジトリの Issues / Pull requests / Metadata 読み取り）とインストール手順が docs にある\n- [ ] secret をまとめて入れるスクリプトがあり、値を標準出力やログに出さない\n- [ ] PAT に必要なスコープ（classic、`repo`・`project`・`read:org`）の記載が正しい（#75）\n- [ ] 既存のテストがすべて通り、追加した動作にテストがある\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)",
+  "body_hash": "5e00b40b05ff7784871b4e81272a9f34811c834140fe68f58b44ddaeb67fbf1c",
+  "stable_acs": [
+    {
+      "id": "78-AC1",
+      "text": "App の資格情報（secret 名は設計で決める）があるとき、`sdd-board.yml` は App のインストールトークンでボードを更新する"
+    },
+    {
+      "id": "78-AC2",
+      "text": "App の資格情報がなく `SDD_PROJECT_TOKEN` があるときは、PAT で今までどおり動く"
+    },
+    {
+      "id": "78-AC3",
+      "text": "どちらもないときは警告して成功で終わる"
+    },
+    {
+      "id": "78-AC4",
+      "text": "ワークフローの `run:` に `${{ }}` を埋め込まない（既存の方針どおり）"
+    },
+    {
+      "id": "78-AC5",
+      "text": "App の作成手順（権限: Organization の Projects 読み書き、リポジトリの Issues / Pull requests / Metadata 読み取り）とインストール手順が docs にある"
+    },
+    {
+      "id": "78-AC6",
+      "text": "secret をまとめて入れるスクリプトがあり、値を標準出力やログに出さない"
+    },
+    {
+      "id": "78-AC7",
+      "text": "PAT に必要なスコープ（classic、`repo`・`project`・`read:org`）の記載が正しい（#75）"
+    },
+    {
+      "id": "78-AC8",
+      "text": "既存のテストがすべて通り、追加した動作にテストがある"
+    }
+  ]
+}

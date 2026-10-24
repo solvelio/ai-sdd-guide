@@ -290,11 +290,24 @@ consumer repo では次の順に行う。
 3. **submodule を上げる。** `git submodule update --remote vendor/ai-sdd-guide`（または目的の revision を checkout）して、親 repo でコミットする。
 4. **`update.sh` を実行する。** `bash vendor/ai-sdd-guide/integration/update.sh`。`.github/workflows/sdd-check.yml` と `.github/workflows/sdd-board.yml` が毎回上書きされる。`.sdd/board.json` は触らない。
 5. **`.sdd/state.json` と `.sdd/tasks.json` を消す。** もう読まれない。あわせて、kanban を使っていた場合は `.github/workflows/kanban-pages.yml` を消し、GitHub Pages を無効にする。
-6. **`SDD_PROJECT_TOKEN` を登録する。** `project` スコープの classic PAT を作り、repo secret `SDD_PROJECT_TOKEN` に登録する（`sdd-board.yml` が使う）。
+6. **`SDD_PROJECT_TOKEN` を登録する。** classic PAT（`repo`（private リポジトリの場合）・`project`・`read:org`）を作り、repo secret `SDD_PROJECT_TOKEN` に登録する（`sdd-board.yml` が使う）。v3.1 以降は GitHub App を使うのが望ましい（下の「v3.1」）。
 7. **`sdd-board.sh init` を実行する。** `bash vendor/ai-sdd-guide/orchestration/tools/sdd-board.sh init [--owner OWNER] [--title TITLE]`。Project と Phase フィールドを作り、`.sdd/board.json`（`owner`・`project`・任意で `tier0_branch_prefixes`）を書き、open な Issue をボードに取り込む。`.sdd/board.json` はコミットする。
    - ボードは 1 アカウントに 1 つ。アカウントにすでに SDD のボードがあるときは、`init` の前にその `owner` / `project` を `.sdd/board.json` に書いておく（`{"owner": "...", "project": 3}`）。そうすれば `init` は新しい Project を作らず、Phase フィールドの確認と Issue の取り込みだけを行う。書かずに実行すると 2 つ目の Project ができる。
-   - ローカルの `gh` には `project` スコープが要る: `gh auth refresh -s project`。
+   - ローカルの `gh` には `project` と `read:org` のスコープが要る: `gh auth refresh -s project,read:org`。
 8. **リポジトリごとのビューを作る。** Projects の画面でビューを足し、絞り込みに `repo:owner/name` を指定する。
 9. **以降、新しい作業にはすべて Issue が要る。** Tier 0 も例外ではない（`t0/<Issue番号>-<名前>`）。dependabot / renovate などの bot ブランチは `tier0_branch_prefixes` で除外される。
 
 既存の完了済み `specs/<feature>/` ディレクトリは改名しない。新しい仕組みの feature 名は `<Issue番号>-<名前>` だが、過去分はそのまま残す。
+
+---
+
+## v3.1: PAT から GitHub App へ
+
+ボードの更新に使うトークンを、個人の PAT（`SDD_PROJECT_TOKEN`）から GitHub App に切り替える。App があれば App、なければ PAT が使われるので、段階的に移せる。手順の詳細は [04-issue-tracker](04-issue-tracker.md) の「GitHub App で動かす」。
+
+1. **App を作る。** Webhook の Active を外し、Organization の Projects を Read and write、リポジトリの Issues / Pull requests / Metadata を Read-only にして、Organization に **All repositories** でインストールする。
+2. **鍵を 1Password へ入れる。** 秘密鍵を生成して `.pem` を 1Password に保管し、ダウンロードしたファイルは消す。
+3. **各リポジトリの `.sdd/board.json` に `app_id` を書く。** PR で入れる。
+4. **鍵を配る。** Mac で `bash vendor/ai-sdd-guide/orchestration/tools/sdd-app-secret.sh --op-ref "op://<保管庫>/<項目>/<欄>" OWNER/NAME`（Organization 全体なら `--all --org ORG`）を実行し、repo secret `SDD_APP_PRIVATE_KEY` を登録する。`app_id` は既定ブランチの `board.json` から読むので、手順 3 の PR を先にマージするか、`--app-id` を渡す。`app_id` がないリポジトリに鍵を配ると、`app_id` をマージするまでそのリポジトリの SDD Board ワークフローは失敗する（スクリプトが警告を出す）。
+5. **PR の CI で App で動くことを確かめる。** `sdd-board.yml` の実行で、App のトークンが作られてボードが更新されていること。
+6. **`SDD_PROJECT_TOKEN` を消し、PAT を無効にする。** 確かめたあと、repo secret `SDD_PROJECT_TOKEN` を削除し、GitHub の画面で PAT を無効にする。
