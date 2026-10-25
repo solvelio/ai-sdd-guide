@@ -1,0 +1,56 @@
+{
+  "issue": 89,
+  "issue_url": "https://github.com/solvelio/ai-sdd-guide/issues/89",
+  "feature": "89-ai-autonomy",
+  "entries": [
+    {
+      "issue_ac": "89-AC1",
+      "spec_ac": "SAC-1",
+      "task": "T1",
+      "test": "tests/test_ai_autonomy.py::test_orchestration_defines_human_touchpoints_and_autonomous_flow",
+      "status": "in-scope"
+    },
+    {
+      "issue_ac": "89-AC2",
+      "spec_ac": "SAC-2",
+      "task": "T1",
+      "test": "tests/test_ai_autonomy.py::test_escalation_conditions_listed_and_referenced",
+      "status": "in-scope"
+    },
+    {
+      "issue_ac": "89-AC3",
+      "spec_ac": "SAC-3",
+      "task": "T2",
+      "test": "tests/test_ai_autonomy.py::test_spec_reviewer_files_define_verdicts_and_limit",
+      "status": "in-scope"
+    },
+    {
+      "issue_ac": "89-AC4",
+      "spec_ac": "SAC-4",
+      "task": "T2",
+      "test": "tests/test_ai_autonomy.py::test_pr_body_template_has_ai_decision_log",
+      "status": "in-scope"
+    },
+    {
+      "issue_ac": "89-AC5",
+      "spec_ac": "SAC-5",
+      "task": "T3",
+      "test": "tests/test_ai_autonomy.py::test_surrounding_docs_have_no_old_stop_phrases",
+      "status": "in-scope"
+    },
+    {
+      "issue_ac": "89-AC6",
+      "spec_ac": "SAC-6",
+      "task": "T1",
+      "test": "tests/test_ai_autonomy.py::test_rules_have_no_old_stop_phrases",
+      "status": "in-scope"
+    },
+    {
+      "issue_ac": "89-AC7",
+      "spec_ac": "SAC-7",
+      "task": "T4",
+      "test": "tests/test_ai_autonomy.py::test_migration_has_v4_section",
+      "status": "in-scope"
+    }
+  ]
+}
