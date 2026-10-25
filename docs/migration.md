@@ -106,33 +106,15 @@ verify フェーズで `specs/<feature>/evidence.json` を作成する。
 
 ## 手順 4: state.json / tasks.json の schema 準拠確認（#52）
 
-> v3 で置き換え済み（`state.json` / `tasks.json` はもう使わない。下の「v3」を参照）。
+> v3 で置き換え済み（下の「v3」を参照）。
 
-スキーマ: `vendor/ai-sdd-guide/orchestration/schema/state.schema.json` / `vendor/ai-sdd-guide/orchestration/schema/tasks.schema.json`
-
-`.sdd/state.json` の形式:
-
-```json
-{"tier": 2, "phase": "implement", "feature": "my-feature"}
-```
-
-`.sdd/tasks.json` の各エントリ形式:
-
-```json
-{
-  "id": "my-feature",
-  "phase": "implement",
-  "status": "in_progress",
-  "handoff": "specs/my-feature/handoff.md",
-  "blocked_reason": null
-}
-```
-
-validator で確認する:
+`.sdd/state.json` / `.sdd/tasks.json` は使わない。Tier・feature・フェーズは、ブランチ名 `t<Tier>/<Issue番号>-<名前>` と `specs/<Issue番号>-<名前>/` のファイルから割り出す。割り出した状態は、その形のブランチの上で次を実行して確認する（`main` など形の違うブランチでは何も出力せず、終了コード 3 で終わる）:
 
 ```bash
-bash vendor/ai-sdd-guide/integration/ci/sdd-validate.sh --root .
+python3 vendor/ai-sdd-guide/integration/ci/sdd_state.py phase
 ```
+
+v2 から移行する場合は、「v3」の手順で `.sdd/state.json` と `.sdd/tasks.json` を消す。
 
 ---
 
@@ -257,8 +239,7 @@ feature ごとに以下を確認する:
 - [ ] `specs/<feature>/issue-snapshot.json` を作成した（新規・移行対象 feature）
 - [ ] `specs/<feature>/traceability.json` を作成した（新規・移行対象 feature）
 - [ ] verify フェーズで `specs/<feature>/evidence.json` を作成した
-- [ ] `.sdd/state.json` が新 schema に準拠している
-- [ ] `.sdd/tasks.json` が新 schema に準拠している
+- [ ] `.sdd/state.json` / `.sdd/tasks.json` を削除し、作業ブランチ名が `t<Tier>/<Issue番号>-<名前>` になっている
 - [ ] CI workflow に `vendor/ai-sdd-guide/integration/ci/sdd-check.yml` の手順を組み込んだ
 - [ ] hook に `vendor/ai-sdd-guide/integration/hooks/sdd-validate-hook.sh` を組み込んだ
 - [ ] `vendor/ai-sdd-guide/integration/prompts/sdd-reviewer-prompt.md` を reviewer 設定に反映した
