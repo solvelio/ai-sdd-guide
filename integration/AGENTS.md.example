@@ -9,14 +9,23 @@ Read the canonical rules before any work:
 - `vendor/ai-sdd-guide/orchestration/rules/orchestration.md`
 - `vendor/ai-sdd-guide/catalog/rules/catalog.md`
 
+## Human touchpoints
+Humans take part only in the initial question (Tier + spec unknowns), escalation, and PR
+review/merge. Run every other step autonomously through to the PR; never merge. See
+`vendor/ai-sdd-guide/orchestration/rules/orchestration.md` (Human touchpoints, Autonomous flow,
+Escalation conditions).
+
 ## Design phases (superpowers required)
 Use superpowers skills (brainstorming → writing-plans) for spec/plan/tasks.
-Capture output into `specs/<feature>/`. Human approves before freezing.
+Capture output into `specs/<feature>/`. Freeze only after an independent spec-reviewer returns
+APPROVE (Claude Code: `spec-reviewer` subagent; other agents:
+`vendor/ai-sdd-guide/integration/prompts/spec-reviewer-prompt.md`).
 
 ## Implementation phase (any agent, no superpowers needed)
 Implement exactly the frozen `specs/<feature>/tasks.md`. No more, no less.
 Every acceptance criterion must map to a passing test.
-If the spec is wrong or insufficient: STOP and escalate. Do not redesign.
+Implement in a fresh agent context, not the one that froze the spec.
+If the spec is wrong or insufficient: stop and report to the orchestrating agent. Do not redesign.
 
 ## Verify phase (superpowers required)
 Run the `sdd-reviewer` subagent/prompt against the diff to confirm the implementation

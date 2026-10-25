@@ -1,14 +1,19 @@
 ## Orchestration (multi-agent SDD)
 
 This project uses multi-agent SDD. Any agent with superpowers can handle any phase.
-The human decides which agent works on which task.
+The orchestrating agent runs all phases and dispatches independent agents; a human may assign a
+specific agent. Humans take part only in the initial question, escalation, and PR review/merge
+(never merge). Escalate only under Escalation conditions in the full rules.
 
 ### If you are a design agent (brainstorm/spec/plan/tasks)
 
 1. Use superpowers brainstorming and writing-plans skills.
 2. At end of tasks phase, generate `specs/<feature>/handoff.md`.
-3. After human approval, freeze with `orchestration/tools/sdd-freeze.sh`.
-4. Commit, run `orchestration/tools/sdd-board.sh sync`, and stop — do NOT start implementing.
+3. Get APPROVE from an independent spec-reviewer
+   (`vendor/ai-sdd-guide/integration/prompts/spec-reviewer-prompt.md`), then freeze with
+   `orchestration/tools/sdd-freeze.sh`.
+4. Commit, run `orchestration/tools/sdd-board.sh sync`, and hand implementation to a fresh agent
+   context that receives only the frozen artifacts and `handoff.md`.
 
 ### If you are an implementation agent
 
@@ -16,12 +21,13 @@ The human decides which agent works on which task.
 2. Implement exactly the tasks in `specs/<feature>/tasks.md`. No more, no less.
 3. Do NOT modify: `specs/` (except checking boxes in `tasks.md`), `orchestration/`.
 4. When done: commit and run `orchestration/tools/sdd-board.sh sync`.
-5. Stop — do NOT start verify.
-6. If blocked: comment the reason on the Issue, stop and wait.
+5. Report back to the orchestrating agent, which continues to verify.
+6. If blocked: stop and report the reason to the orchestrating agent.
 
 ### If you are a verify agent
 
 Pass the contents of `vendor/ai-sdd-guide/integration/prompts/sdd-reviewer-prompt.md`
-to your subagent mechanism, then report results, commit, run `orchestration/tools/sdd-board.sh sync`, and stop.
+to your subagent mechanism, then report results, commit, run `orchestration/tools/sdd-board.sh sync`,
+push, and create the PR with the `## AI の判断` decision log (`vendor/ai-sdd-guide/templates/pr-body.md`).
 
 Full rules: `vendor/ai-sdd-guide/orchestration/rules/orchestration.md`

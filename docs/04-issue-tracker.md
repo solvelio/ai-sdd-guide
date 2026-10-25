@@ -90,19 +90,20 @@ Tier ルールも SDD フェーズも全プラットフォーム共通。
 ```
 Issue 登録（バグ報告・機能要望）
   → Actions がボードに backlog でカードを置く
-  → 人間が Tier を判断 → sdd:tier-x ラベルを付与
-  → エージェントが Issue を読み、ブランチ t<Tier>/<Issue番号>-<名前> を作って SDD ワークフロー開始
+  → エージェントが Issue を読み、最初の質問（Tier の案と仕様の不明点）を人間に聞く
+  → 人間が Tier を決めて回答 → エージェントが sdd:tier-x ラベルを付与
+  → エージェントがブランチ t<Tier>/<Issue番号>-<名前> を作って SDD ワークフロー開始
      - Tier 0: そのまま実装 → PR（closes #N）
-     - Tier 1: 軽量 spec → 凍結 → 実装 → PR
-     - Tier 2: spec → plan → tasks → 凍結 → 実装 → verify → PR
-     → フェーズの区切りで commit → sdd-board.sh sync → 止まる
-     → 行き詰まったら Issue にコメントで理由を書いて止まる
-  → PR マージ → ボードのカードが done → Issue クローズ
+     - Tier 1: 軽量 spec → spec レビュー → 凍結 → 実装 → PR
+     - Tier 2: spec → plan → tasks → spec レビュー → 凍結 → 実装 → verify → PR
+     → フェーズの区切りで commit → sdd-board.sh sync → 止まらずに次へ
+     → 問い合わせの条件に当たるときだけ人間に聞く（不在なら Issue にコメントして停止）
+  → 人間が PR をレビューしてマージ → ボードのカードが done → Issue クローズ
 ```
 
 - Tier の定義は [01. ワークフロー](01-workflow.md) を参照。
-- フェーズ境界ごとに `sdd-board.sh sync` でボードを更新する（オーケストレーションの
-  停止ルールと同じ。`orchestration/rules/orchestration.md`）。push は PR を作る直前だけ。
+- フェーズ境界ごとに `sdd-board.sh sync` でボードを更新する（`orchestration/rules/orchestration.md`
+  の Autonomous flow）。push は PR を作る直前だけ。
 - Tier ラベルは PR にも付ける（hooks / CI が参照。`rules/conventions.md`）。
 
 [#71]: https://github.com/solvelio/ai-sdd-guide/issues/71

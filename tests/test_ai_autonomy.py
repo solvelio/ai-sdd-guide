@@ -132,3 +132,44 @@ def test_pr_body_template_has_ai_decision_log():
     for phrase in ["## AI の判断", "spec レビュー", "不明点", "指摘", "スコープ外"]:
         assert phrase in content, phrase
     assert "templates/pr-body.md" in read(ORCHESTRATION)
+
+
+# --- T3: surrounding docs, hooks, templates ---
+
+SURROUNDING_FILES = [
+    "integration/hooks/skill-reminder.sh",
+    "integration/hooks/codex-skill-reminder.sh",
+    "integration/AGENTS.md.example",
+    "orchestration/integration/AGENTS-patch.md.example",
+    "orchestration/templates/handoff.md.example",
+    "integration/agents/sdd-reviewer.md",
+    "integration/prompts/sdd-reviewer-prompt.md",
+    "docs/00-overview.md",
+    "docs/01-workflow.md",
+    "docs/02-roles.md",
+    "docs/03-faq.md",
+    "docs/04-issue-tracker.md",
+    "README.md",
+]
+
+
+def test_surrounding_docs_have_no_old_stop_phrases():
+    assert_no_old_stop_phrases(SURROUNDING_FILES)
+
+
+def test_spec_phase_reminder_mentions_spec_reviewer(tmp_path):
+    from test_skill_reminder import CLAUDE, CODEX, _repo, _run, _spec
+
+    repo = _repo(tmp_path, "t2/1-feature")
+    _spec(repo, "1-feature", ["spec.md"])
+    for hook in [CLAUDE, CODEX]:
+        out = _run(hook, repo)
+        assert "spec-reviewer" in out, hook
+        assert "human approval" not in out.lower(), hook
+
+
+def test_docs_describe_human_touchpoints():
+    body = section(read("docs/02-roles.md"), "## 人間")
+    for phrase in ["最初の質問", "問い合わせ", "PR"]:
+        assert phrase in body, phrase
+    assert "spec-reviewer" in read("docs/01-workflow.md")

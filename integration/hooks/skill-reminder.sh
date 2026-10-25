@@ -28,7 +28,7 @@ case "$phase" in
     echo "SDD reminder: brainstorm phase — invoke skill 'brainstorming' (Skill tool) before drafting the spec." >&2
     ;;
   spec)
-    echo "SDD reminder: spec phase — capture brainstorm output into specs/<feature>/spec.md with checkable acceptance criteria. Get human approval before freezing." >&2
+    echo "SDD reminder: spec phase — capture brainstorm output into specs/<feature>/spec.md with checkable acceptance criteria. Before freezing, get APPROVE from the 'spec-reviewer' subagent." >&2
     ;;
   plan|tasks)
     echo "SDD reminder: $phase phase — invoke skill 'writing-plans' (Skill tool). For parallelism consider 'dispatching-parallel-agents'." >&2
