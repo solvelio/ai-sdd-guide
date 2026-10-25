@@ -108,7 +108,7 @@ verify フェーズで `specs/<feature>/evidence.json` を作成する。
 
 > v3 で置き換え済み（下の「v3」を参照）。
 
-`.sdd/state.json` / `.sdd/tasks.json` は使わない。Tier・feature・フェーズは、ブランチ名 `t<Tier>/<Issue番号>-<名前>` と `specs/<Issue番号>-<名前>/` のファイルから割り出す。割り出した状態は次で確認する:
+`.sdd/state.json` / `.sdd/tasks.json` は使わない。Tier・feature・フェーズは、ブランチ名 `t<Tier>/<Issue番号>-<名前>` と `specs/<Issue番号>-<名前>/` のファイルから割り出す。割り出した状態は、その形のブランチの上で次を実行して確認する（`main` など形の違うブランチでは何も出力せず、終了コード 3 で終わる）:
 
 ```bash
 python3 vendor/ai-sdd-guide/integration/ci/sdd_state.py phase
