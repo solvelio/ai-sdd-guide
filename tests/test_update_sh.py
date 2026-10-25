@@ -32,3 +32,9 @@ def test_update_sh_does_not_overwrite_board_json(tmp_path):
     r = _run(tmp_path)
     assert r.returncode == 0, r.stderr
     assert board.read_text() == '{"owner": "me", "project": 7}\n'
+
+
+def test_update_sh_distributes_spec_reviewer(tmp_path):
+    r = _run(tmp_path)
+    assert r.returncode == 0, r.stderr
+    assert (tmp_path / ".claude/agents/spec-reviewer.md").is_file()

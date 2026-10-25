@@ -173,3 +173,19 @@ def test_docs_describe_human_touchpoints():
     for phrase in ["最初の質問", "問い合わせ", "PR"]:
         assert phrase in body, phrase
     assert "spec-reviewer" in read("docs/01-workflow.md")
+
+
+# --- T4: migration guide ---
+
+def test_migration_has_v4_section():
+    body = section(read("docs/migration.md"), "## v4: 人間の関与を最初の質問と PR レビューに絞る（#89）")
+    for phrase in [
+        "最初の質問",
+        "問い合わせ",
+        "PR レビュー",
+        "spec-reviewer",
+        "update.sh",
+        ".claude/agents/",
+        "spec-reviewer-prompt.md",
+    ]:
+        assert phrase in body, phrase

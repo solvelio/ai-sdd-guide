@@ -19,7 +19,7 @@
   - `test_surrounding_docs_have_no_old_stop_phrases`: 上の全ファイルに `OLD_STOP_PHRASES` がない
   - `test_spec_phase_reminder_mentions_spec_reviewer`: 両 hook を spec フェーズで動かした出力（既存の `tests/test_skill_reminder.py` の動かし方に合わせる）が `spec-reviewer` を含み `human approval` を含まない
   - `test_docs_describe_human_touchpoints`: `docs/02-roles.md` の `## 人間` の節が `最初の質問`・`問い合わせ`・`PR` を含み、`docs/01-workflow.md` が `spec-reviewer` を含む。対応AC: SAC-5, SAC-6
-- [ ] T4: `docs/migration.md` の末尾に `## v4: 人間の関与を最初の質問と PR レビューに絞る（#89）` を足す（人間の関与が最初の質問・問い合わせ・PR レビューに移ったこと、`spec-reviewer` が `update.sh` で `.claude/agents/` に配られること、Claude 以外のエージェントは `vendor/ai-sdd-guide/integration/prompts/spec-reviewer-prompt.md` を使うこと、PR 本文の雛形 `vendor/ai-sdd-guide/templates/pr-body.md`）。テスト:
+- [x] T4: `docs/migration.md` の末尾に `## v4: 人間の関与を最初の質問と PR レビューに絞る（#89）` を足す（人間の関与が最初の質問・問い合わせ・PR レビューに移ったこと、`spec-reviewer` が `update.sh` で `.claude/agents/` に配られること、Claude 以外のエージェントは `vendor/ai-sdd-guide/integration/prompts/spec-reviewer-prompt.md` を使うこと、PR 本文の雛形 `vendor/ai-sdd-guide/templates/pr-body.md`）。テスト:
   - `test_migration_has_v4_section`: その節が `最初の質問`・`問い合わせ`・`PR レビュー`・`spec-reviewer`・`update.sh`・`.claude/agents/`・`spec-reviewer-prompt.md` を含む
   - `test_update_sh_distributes_spec_reviewer`: `tests/test_update_sh.py` の既存の動かし方で `update.sh` を実行し、consumer の `.claude/agents/spec-reviewer.md` ができる（`tests/test_update_sh.py` に足す）。対応AC: SAC-7, SAC-6
 
@@ -29,8 +29,8 @@
 - [x] SAC-3 → `tests/test_ai_autonomy.py::test_spec_reviewer_files_define_verdicts_and_limit`, `::test_rules_require_spec_review_before_freeze`
 - [x] SAC-4 → `tests/test_ai_autonomy.py::test_pr_body_template_has_ai_decision_log`
 - [x] SAC-5 → `tests/test_ai_autonomy.py::test_surrounding_docs_have_no_old_stop_phrases`, `::test_spec_phase_reminder_mentions_spec_reviewer`, `::test_docs_describe_human_touchpoints`
-- [ ] SAC-6 → 上のテストすべてと、既存の `tests/test_rules_freeze_verify.py` が通る
-- [ ] SAC-7 → `tests/test_ai_autonomy.py::test_migration_has_v4_section`, `tests/test_update_sh.py::test_update_sh_distributes_spec_reviewer`
+- [x] SAC-6 → 上のテストすべてと、既存の `tests/test_rules_freeze_verify.py` が通る
+- [x] SAC-7 → `tests/test_ai_autonomy.py::test_migration_has_v4_section`, `tests/test_update_sh.py::test_update_sh_distributes_spec_reviewer`
 
 ## 完了の定義
 - 全テスト green（`uv run --no-project --with pytest --with jsonschema python -m pytest tests -q`）
