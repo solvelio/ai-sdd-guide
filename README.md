@@ -118,6 +118,8 @@ cp vendor/ai-sdd-guide/integration/ci/sdd-board.yml .github/workflows/
 #    guide が private な場合は、このリポジトリと guide の両方を読める PAT をリポジトリ secret SDD_GUIDE_TOKEN に登録する（docs/migration.md 手順 5）
 
 # 6. （任意）ボードを使う: GitHub Projects のボードを作り、.sdd/board.json を作成する
+#    init は board.json がないと Project を新しく作る。ボードはアカウントで 1 枚なので、同じ owner の 2 つ目以降のリポジトリでは
+#    既存リポジトリの .sdd/board.json（owner・project・app_id）をコピーして置く（init は不要。docs/04-issue-tracker.md「リポジトリを足すとき」）
 bash vendor/ai-sdd-guide/orchestration/tools/sdd-board.sh init
 #    Actions の認証は次から選ぶ（手順は docs/04-issue-tracker.md）
 #    - Organization のリポジトリ: GitHub App。鍵を secret SDD_APP_PRIVATE_KEY に、App ID を board.json の app_id に書く
