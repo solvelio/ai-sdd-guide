@@ -158,7 +158,7 @@ def test_step5_describes_actual_sdd_check_steps():
     yml = (ROOT / "integration" / "ci" / "sdd-check.yml").read_text()
     names = re.findall(r"^\s*- name:\s*(.+?)\s*$", yml, re.MULTILINE)
     assert names, "no step names found in sdd-check.yml"
-    missing = [n for n in names if n not in step5]
+    missing = [n for n in names if f"**{n}**" not in step5]
     assert not missing, f"手順 5 does not mention sdd-check.yml steps: {missing}"
 
 

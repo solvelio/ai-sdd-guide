@@ -132,7 +132,7 @@ v2 から移行する場合は、「v3」の手順で `.sdd/state.json` と `.sd
 既存 CI workflow がある場合は `sdd-check.yml` の各ステップを既存 workflow に追加する。sdd-check.yml は以下のステップを実行する:
 
 1. **Install dependencies** — validator が使う `jsonschema` を入れる
-2. **Run sdd-validate** — `sdd-validate.sh --root . --pr --branch <PR のブランチ> --pr-labels <PR のラベル>` を実行する。ブランチ名の形、PR の Tier ラベルとブランチの Tier の一致、`freeze.json` と `handoff.md`（Tier 1/2）、Tier 2 の traceability / issue snapshot / evidence を検査する
+2. **Run sdd-validate** — `sdd-validate.sh --root . --pr --branch <PR のブランチ> --pr-labels <PR のラベル>` を実行する。ブランチ名の形、PR の Tier ラベルとブランチの Tier の一致、`freeze.json` と `handoff.md`（Tier 1/2）、Tier 2 の traceability / issue snapshot / evidence と `tasks.md` の完了状態を検査する
 3. **Tests** — このプロジェクトのテストを実行する（上で差し替えたコマンド）
 
 guide を private な fork や社内ミラーとして submodule にしている場合、デフォルトの `GITHUB_TOKEN` では submodule を取得できない。PAT をリポジトリ secret `SDD_GUIDE_TOKEN` に登録する。`sdd-check.yml` は secret があればそれを使い、なければ `GITHUB_TOKEN` を使うので、yml を編集する必要はない（`update.sh` で上書きされても設定は消えない）。
