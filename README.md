@@ -30,17 +30,20 @@ AIエージェントと人間が同じルールで開発するための土台を
 1. **Claude hooks** — `sdd-guard.sh` が設計フェーズの逸脱をローカルで弾き、`skill-reminder.sh` が現在の Tier/phase に応じた superpowers skill を案内する（速い注意喚起・バイパス可）
 2. **Codex hooks** — `codex-sdd-guard.sh` が検出可能な source edit をローカルで弾き、`codex-skill-reminder.sh` が Tier/phase に応じた SDD 注意を developer context に注入する（Codex hook の検出範囲内でのみ有効）
 3. **CI** — 全agent共通の権威ある門番（spec有無・テスト）。バイパス不可
-4. **sdd-reviewer subagent** — 実装が凍結specに適合するか独立監査。レビューフィードバックの吸収が scope creep になっていないか（`receiving-code-review` 規律の痕跡）も確認
+4. **spec-reviewer subagent** — 凍結の前に spec が Issue と最初の回答に沿っているか独立に照合する（spec の承認。`APPROVE` / `CHANGES` / `ESCALATE`）
+5. **sdd-reviewer subagent** — 実装が凍結specに適合するか独立監査。レビューフィードバックの吸収が scope creep になっていないか（`receiving-code-review` 規律の痕跡）も確認
 
 ## マルチエージェント・オーケストレーション
 
-superpowers がインストールされたエージェントであれば誰でも設計・実装・verify の全フェーズを担当できる。人間が「このタスクをこのエージェントで」と指示し、エージェントはフェーズ完了後に commit → `sdd-board.sh sync` を実行して停止する。
+superpowers がインストールされたエージェントであれば誰でも設計・実装・verify の全フェーズを担当できる。人間の関与は「最初の質問（Tier と仕様の不明点）」「問い合わせ（条件に当たるときだけ）」「PR のレビューとマージ」の 3 つに絞る。それ以外はエージェントが独立したエージェント（サブエージェント）を使って進め、フェーズの境目ごとに commit → `sdd-board.sh sync` を実行して、止まらずに PR の作成まで進める。マージは人間が行う。
 
 | コンポーネント | パス | 役割 |
 |---|---|---|
-| エージェントルール | `orchestration/rules/orchestration.md` | フェーズ割り当て・停止ルール（全agent）|
+| エージェントルール | `orchestration/rules/orchestration.md` | 人間が関わる場面・自律で進める範囲・spec レビュー・問い合わせの条件・PR の「AI の判断」（全agent）|
 | テンプレート | `orchestration/templates/handoff.md.example` | handoff.md の雛形 |
 | Reviewer プロンプト | `integration/prompts/sdd-reviewer-prompt.md` | エージェント非依存の verify 指示文 |
+| spec Reviewer プロンプト | `integration/prompts/spec-reviewer-prompt.md` | エージェント非依存の spec レビュー（凍結の前の承認）指示文 |
+| PR 本文の雛形 | `templates/pr-body.md` | 「AI の判断」の節を含む PR 本文 |
 | 凍結コマンド | `orchestration/tools/sdd-freeze.sh` | `specs/<feature>/freeze.json` を作る（対象ファイルのハッシュを記録）|
 | ボード操作 | `orchestration/tools/sdd-board.sh` | GitHub Projects のボードを `sync` / `init` / `import` / `set` / `close` / `pr` で操作 |
 | ボード Actions | `integration/ci/sdd-board.yml` | Issue・PR のイベントでボードを更新する見本 |

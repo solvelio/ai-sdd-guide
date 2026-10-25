@@ -17,19 +17,21 @@ Bitbucket is out of scope (its Issues are being sunset).
 
 - Do not start design or implementation until the issue carries a human-assigned
   `sdd:tier-{0,1,2}` label. The human owns the Tier decision. If it is missing, ask for it
-  and stop.
+  in the initial question (Tier proposal with reasons + spec unknowns, in one message) and
+  apply the label from the answer (`## Human touchpoints` in `orchestration/rules/orchestration.md`).
 - Every piece of work needs an Issue, Tier 0 included. On starting an issue, create the
   branch `t<Tier>/<Issue番号>-<名前>` (spec directory `specs/<Issue番号>-<名前>/`). At every
-  phase boundary: commit → `vendor/ai-sdd-guide/orchestration/tools/sdd-board.sh sync` → stop — this is the
-  orchestration stop rule (`orchestration/rules/orchestration.md`).
-- If stuck, comment the reason on the Issue and stop.
+  phase boundary: commit → `vendor/ai-sdd-guide/orchestration/tools/sdd-board.sh sync` → continue without
+  stopping (`## Autonomous flow` in `orchestration/rules/orchestration.md`).
+- If stuck, escalate only under `## Escalation conditions` (`orchestration/rules/orchestration.md`).
 - Run the Tier-appropriate flow (see `rules/workflow.md`):
   - Tier 0 — implement → PR (still with an Issue and a `t0/` branch).
-  - Tier 1 — lightweight spec → human approval → `vendor/ai-sdd-guide/orchestration/tools/sdd-freeze.sh` (freezes `spec.md`) → `handoff.md` → implement → PR. CI requires `freeze.json` and `handoff.md` on Tier 1 PRs.
-  - Tier 2 — spec → plan → tasks → implement → verify → PR.
+  - Tier 1 — lightweight spec → spec review (`spec-reviewer` `APPROVE`) → `vendor/ai-sdd-guide/orchestration/tools/sdd-freeze.sh` (freezes `spec.md`) → `handoff.md` → implement → PR. CI requires `freeze.json` and `handoff.md` on Tier 1 PRs.
+  - Tier 2 — spec → plan → tasks → spec review (`spec-reviewer` `APPROVE`) → freeze → implement → verify → PR.
 - Link the PR back to the issue so merging closes it: `closes #N` (GitHub / GitLab /
   Bitbucket) or `AB#N` (Azure DevOps).
 - Carry the matching `sdd:tier-{0,1,2}` label onto the PR (`rules/conventions.md`).
+- The human reviews and merges the PR; never merge.
 
 ## Tier 2 freeze gate (check before running `sdd-freeze.sh`)
 
@@ -42,11 +44,13 @@ Bitbucket is out of scope (its Issues are being sunset).
 - Entries with status `out-of-scope` or `deferred` must have a non-empty `reason`
   and an HTTP(S) `followup_issue` URL. No orphaned scope-outs allowed.
 - If the frozen spec is weaker than the Issue (criteria removed or softened),
-  surface a diff summary and obtain explicit human approval before freezing.
+  surface a diff summary and escalate: obtain explicit human approval
+  (`## Escalation conditions` 1) before running `sdd-freeze.sh`. Otherwise, freeze once
+  `spec-reviewer` returns `APPROVE`.
 
 ## Never
 
-- Never implement an unlabeled issue — escalate for a Tier first.
+- Never implement an unlabeled issue — ask for a Tier in the initial question first.
 - Never treat a board as the status source of truth; status is derived from the branch name and `specs/`.
 - Never expand scope beyond the issue. New scope is a new issue + a new spec.
 - Never freeze a Tier 2 spec that has untracked Issue ACs or out-of-scope entries

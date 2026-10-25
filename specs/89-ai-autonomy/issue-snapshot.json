@@ -1,0 +1,37 @@
+{
+  "issue": 89,
+  "url": "https://github.com/solvelio/ai-sdd-guide/issues/89",
+  "fetched_at": "2026-10-25T08:07:30Z",
+  "raw_body": "## 背景\n\n今の rules は、Issue の対応中に人間の判断を何度も求める。\n\n- `orchestration/rules/orchestration.md`「Phase stopping rule」: フェーズが終わるたびに停止し、人間の明示の指示を待つ（設計 → 実装 → verify → PR の各境目）\n- `rules/workflow.md` 2・4: spec は人間が承認し、その後に freeze する。freeze と実装は同じセッションで行わない\n- `rules/issue-intake.md`: Tier ラベルは人間が付ける。ないときは聞いて停止する。spec が Issue の AC を弱めるときは人間の明示の承認が要る\n- 行き詰まったら Issue にコメントして停止し、人間に上げる\n\n実際の運用では、1 つの Issue で「Tier の回答 → spec 承認 → 実装の指示 → verify と PR の指示 → マージの指示」と、人間が 5 回前後入っている。AI の関与の比率を上げ、人間の関与を「最初の質問」と「PR のレビュー」に寄せたい。\n\n## 目指す流れ（guide の既定にする）\n\n1. **最初の質問（人間）**: AI が Issue を読み、Tier の案と仕様の不明点をまとめて 1 回で聞く。人間が Tier（`sdd:tier-N` ラベル）と不明点に答える\n2. **以降は AI 内で解決**: spec → （Tier 2: plan / tasks）→ freeze → 実装 → verify → PR 作成まで、フェーズごとに止まらずに進める\n   - spec（Tier 2 は plan / tasks / traceability も）は、独立したサブエージェント（レビュアー）が Issue と照合して承認し、承認後に freeze する\n   - 実装は spec と handoff だけを渡した新しいサブエージェントが行う（freeze と実装を同じコンテキストで行わない、を満たす）\n   - verify は独立したレビュアーのサブエージェントが行い、指摘は `receiving-code-review` の規律で扱う\n   - フェーズの境目の commit → `sdd-board.sh sync` は続ける（停止はしない）\n3. **どうしても判断できないものだけ人間に問い合わせる**: 例: Issue の AC を弱める・スコープ外にする必要がある、spec と実装の矛盾が spec の変更を要する、レビュアー同士で判断が割れる、不可逆・外部への操作\n4. **PR のレビューと承認は人間**: PR 本文に、AI が下した判断（spec の承認、レビュー指摘の採否、スコープ外にしたもの）を人間が確認できる形で書く。マージは人間の承認後\n\n## 受入条件\n\n- [ ] AC1: `rules/` と `orchestration/rules/orchestration.md` の既定の流れが上の 1〜4 になっている（フェーズごとの停止の規則、spec の人間承認、freeze と実装の別セッションの規則を置き換える）\n- [ ] AC2: 人間に問い合わせる条件（上の 3）が rules に列挙されている。AC を弱める・スコープ外にする判断は、従来どおり人間の明示の承認が要る\n- [ ] AC3: spec の AI 承認の手順（誰が・何と照合し・承認をどこに記録するか）が定義されている\n- [ ] AC4: PR 本文に AI の判断の記録を載せることが rules とテンプレートに書かれている\n- [ ] AC5: hooks（`skill-reminder.sh`・`codex-skill-reminder.sh`）、`integration/AGENTS.md.example`、`orchestration/templates/handoff.md.example`、`integration/agents/sdd-reviewer.md` / `integration/prompts/sdd-reviewer-prompt.md`、`docs/`（01-workflow・02-roles・04-issue-tracker など）、README の記述が新しい流れと矛盾しない\n- [ ] AC6: 既存のテスト（`tests/test_rules_freeze_verify.py` など、旧い停止・承認の文言を検査しているもの）が新しい流れに合わせて更新され、新しい規則の要点をテストが検査する\n- [ ] AC7: `docs/migration.md` に、既存の consumer 向けの変更点（人間の関与がどこに移ったか）が書かれている\n\n## 補足\n\n- 方針の決定（2026-10-25、人間との確認）: 選択式ではなく guide の既定を自律に変える。最初の質問は Tier と仕様の不明点。spec の承認は AI のレビュアー。\n- CI（`sdd-validate`）の freeze の検査は変えない想定。`freeze.json` は誰が承認したかを持たないので、AI 承認でも同じ形で作れる。\n",
+  "body_hash": "ba8cbfe157302b7b4d678625ad3ada092426da3010962e18a7bd8679a9a3fa63",
+  "stable_acs": [
+    {
+      "id": "89-AC1",
+      "text": "AC1: `rules/` と `orchestration/rules/orchestration.md` の既定の流れが上の 1〜4 になっている（フェーズごとの停止の規則、spec の人間承認、freeze と実装の別セッションの規則を置き換える）"
+    },
+    {
+      "id": "89-AC2",
+      "text": "AC2: 人間に問い合わせる条件（上の 3）が rules に列挙されている。AC を弱める・スコープ外にする判断は、従来どおり人間の明示の承認が要る"
+    },
+    {
+      "id": "89-AC3",
+      "text": "AC3: spec の AI 承認の手順（誰が・何と照合し・承認をどこに記録するか）が定義されている"
+    },
+    {
+      "id": "89-AC4",
+      "text": "AC4: PR 本文に AI の判断の記録を載せることが rules とテンプレートに書かれている"
+    },
+    {
+      "id": "89-AC5",
+      "text": "AC5: hooks（`skill-reminder.sh`・`codex-skill-reminder.sh`）、`integration/AGENTS.md.example`、`orchestration/templates/handoff.md.example`、`integration/agents/sdd-reviewer.md` / `integration/prompts/sdd-reviewer-prompt.md`、`docs/`（01-workflow・02-roles・04-issue-tracker など）、README の記述が新しい流れと矛盾しない"
+    },
+    {
+      "id": "89-AC6",
+      "text": "AC6: 既存のテスト（`tests/test_rules_freeze_verify.py` など、旧い停止・承認の文言を検査しているもの）が新しい流れに合わせて更新され、新しい規則の要点をテストが検査する"
+    },
+    {
+      "id": "89-AC7",
+      "text": "AC7: `docs/migration.md` に、既存の consumer 向けの変更点（人間の関与がどこに移ったか）が書かれている"
+    }
+  ]
+}

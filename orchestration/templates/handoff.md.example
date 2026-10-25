@@ -3,7 +3,7 @@
 ## Your scope
 
 Implementation phase only. Do not touch `spec.md`, `plan.md`, or the verify phase.
-If the spec needs changes, stop and escalate to a human.
+If the spec needs changes, stop and report to the orchestrating agent.
 
 ## Done when
 
@@ -20,5 +20,6 @@ If the spec needs changes, stop and escalate to a human.
 ## If the spec is ambiguous or insufficient
 
 1. Stop immediately.
-2. Comment the reason on the Issue.
-3. Wait for a human to escalate to Claude before resuming.
+2. Report the reason to the orchestrating agent.
+3. Do not redesign. The orchestrating agent resolves it through spec review or escalates
+   (Escalation conditions in `orchestration/rules/orchestration.md`).

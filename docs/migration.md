@@ -293,3 +293,26 @@ consumer repo では次の順に行う。
 4. **鍵を配る。** Mac で `bash vendor/ai-sdd-guide/orchestration/tools/sdd-app-secret.sh --op-ref "op://<保管庫>/<項目>/<欄>" OWNER/NAME`（Organization 全体なら `--all --org ORG`）を実行し、repo secret `SDD_APP_PRIVATE_KEY` を登録する。`app_id` は既定ブランチの `board.json` から読むので、手順 3 の PR を先にマージするか、`--app-id` を渡す。`app_id` がないリポジトリに鍵を配ると、`app_id` をマージするまでそのリポジトリの SDD Board ワークフローは失敗する（スクリプトが警告を出す）。
 5. **PR の CI で App で動くことを確かめる。** `sdd-board.yml` の実行で、App のトークンが作られてボードが更新されていること。
 6. **`SDD_PROJECT_TOKEN` を消し、PAT を無効にする。** 確かめたあと、repo secret `SDD_PROJECT_TOKEN` を削除し、GitHub の画面で PAT を無効にする。
+
+---
+
+## v4: 人間の関与を最初の質問と PR レビューに絞る（#89）
+
+guide の既定の流れを変え、人間の関与を **最初の質問・問い合わせ・PR レビュー（とマージ）** の 3 つに絞る。それ以外は AI が独立したエージェント（サブエージェント）を使って PR の作成まで進める。正本は `vendor/ai-sdd-guide/orchestration/rules/orchestration.md` の Human touchpoints・Autonomous flow・Spec review・Escalation conditions・PR decision log。
+
+変わること:
+
+- **最初の質問**: AI が Issue を読み、Tier の案とその理由、仕様の不明点（答えによって作るものが変わるものだけ）を 1 つのメッセージで聞く。Tier を決めるのは人間のままで、回答に従って AI が `sdd:tier-N` ラベルを付ける。
+- **フェーズごとの停止がなくなる**: 各フェーズの境目では commit → `sdd-board.sh sync` を行い、止まらずに次へ進む。凍結の後の実装は、凍結した成果物と `handoff.md` だけを渡した新しいエージェントのコンテキストで行う。
+- **spec の承認は `spec-reviewer` が行う**: 凍結の直前に、spec を書いていない独立したエージェントが照合し、`APPROVE` / `CHANGES` / `ESCALATE` を返す（`CHANGES` は 3 回まで）。判定と回数は凍結のコミットのメッセージに書く（例: `Spec review: APPROVE (2 rounds)`）。
+- **問い合わせ**: Issue の AC を削る・弱める・スコープ外にするときなど、問い合わせの条件（6 項目）に当たるときだけ人間に聞く。AC を弱めるときに明示の人間承認が要ることは変わらない。
+- **PR レビュー**: PR 本文に「AI の判断」の節を設ける。雛形は `vendor/ai-sdd-guide/templates/pr-body.md`。AI はマージしない。
+
+consumer repo では次を行う。
+
+1. **submodule を上げて `update.sh` を実行する。** `bash vendor/ai-sdd-guide/integration/update.sh`。`integration/agents/` が丸ごと `.claude/agents/` に写されるので、`spec-reviewer` のサブエージェント定義（`.claude/agents/spec-reviewer.md`）が配られる。
+2. **Claude 以外のエージェント**（Codex・Gemini CLI など）では、spec レビューに `vendor/ai-sdd-guide/integration/prompts/spec-reviewer-prompt.md` を使う（Codex は `spawn_agent`、Gemini CLI は `@generalist` に渡す）。独立したエージェントを起動できない環境では、spec レビューと verify は人間に問い合わせる。
+3. **`AGENTS.md` を見直す。** `AGENTS.md` は `update.sh` で上書きされない。`vendor/ai-sdd-guide/integration/AGENTS.md.example` と差分を取り、「凍結の前に人間が承認する」などの旧い記述を新しい流れに合わせる。
+4. **PR 本文の雛形を使う。** `vendor/ai-sdd-guide/templates/pr-body.md` を PR テンプレートに写すか、PR を作るエージェントに参照させる。
+
+CI・validator・guard・`freeze.json` の形は変わらない。進行中の feature はそのまま続けてよい。

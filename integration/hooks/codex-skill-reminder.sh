@@ -31,7 +31,7 @@ case "$phase" in
     msg="SDD reminder: brainstorm phase. Use the superpowers 'brainstorming' skill before drafting the spec; if this agent cannot use it, stop and hand off design work."
     ;;
   spec)
-    msg="SDD reminder: spec phase. Capture brainstorm output into specs/<feature>/spec.md with checkable acceptance criteria, then get human approval before freezing."
+    msg="SDD reminder: spec phase. Capture brainstorm output into specs/<feature>/spec.md with checkable acceptance criteria, then get APPROVE from an independent spec-reviewer (vendor/ai-sdd-guide/integration/prompts/spec-reviewer-prompt.md via spawn_agent) before freezing."
     ;;
   plan|tasks)
     msg="SDD reminder: ${phase} phase. Use the superpowers 'writing-plans' skill; for parallel work consider dispatching parallel agents."

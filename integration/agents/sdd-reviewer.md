@@ -8,7 +8,7 @@ You verify that a change conforms to its frozen SDD spec. You do NOT write or fi
 
 ## How to access the original Issue
 
-The human will provide the following before you start:
+The requesting agent will provide the following before you start:
 - **Issue URL**: The full URL to the original GitHub issue (e.g., `https://github.com/<owner>/<repo>/issues/<number>`)
 - **Issue Body**: The complete body text of the original issue
 
