@@ -2,7 +2,7 @@
 
 ## Scope assignment
 
-All phases are open to any agent with superpowers installed. The orchestrating agent runs all phases, dispatching independent agents (subagents) where required; a human may assign a specific agent.
+All phases are open to any agent with superpowers installed. The orchestrating agent (the agent that took the Issue and asked the initial question) runs all phases, dispatching independent agents (subagents) where required; a human may assign a specific agent.
 
 | Phase | Requirement | Notes |
 |---|---|---|
@@ -115,12 +115,12 @@ Template: `templates/pr-body.md` (from a consumer: `vendor/ai-sdd-guide/template
   If any condition fails, fix `traceability.json` before proceeding — do not generate
   a handoff for an incomplete spec.
 - **Issue Diff Summary**: Pass the spec reviewer a diff summary comparing the
-  original Issue body to the frozen spec, and carry it into the PR decision log. Explicitly
+  original Issue body to the spec under review, and carry it into the PR decision log. Explicitly
   document what changed, what was dropped, and why. This is mandatory for Tier 2. The
-  frozen spec must not be weaker than the Issue unless the human approved it
+  spec must not be weaker than the Issue unless the human approved it
   (`## Escalation conditions` 1).
-- At end of tasks phase, generate `specs/<feature>/handoff.md` from `orchestration/templates/handoff.md.example`.
-- Commit, run `vendor/ai-sdd-guide/orchestration/tools/sdd-board.sh sync`, and continue to spec review.
+- At end of the tasks phase (Tier 1: spec phase), commit, run `vendor/ai-sdd-guide/orchestration/tools/sdd-board.sh sync`, and continue to spec review.
+- After `APPROVE`, freeze, then generate `specs/<feature>/handoff.md` from `orchestration/templates/handoff.md.example`.
 
 ## Rules for implementation agents
 

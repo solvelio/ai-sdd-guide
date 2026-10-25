@@ -74,6 +74,8 @@ def test_orchestration_defines_human_touchpoints_and_autonomous_flow():
     ]:
         assert re.search(rf"^{re.escape(heading)}$", content, re.M), heading
     assert "never merge" in content.lower()
+    for path in ["rules/core.md", "rules/workflow.md", "rules/issue-intake.md"]:
+        assert "never merge" in read(path).lower(), path
     assert "Initial question" in content
     assert "sdd:tier-N" in content
     assert "sdd-board.sh sync" in content
@@ -84,12 +86,22 @@ def test_escalation_conditions_listed_and_referenced():
     for n in range(1, 7):
         assert re.search(rf"^{n}\. ", body, re.M), n
     assert "comment the reason on the Issue" in body
-    for path in ["rules/core.md", "rules/workflow.md", "rules/issue-intake.md"]:
+    for path in ["rules/core.md", "rules/workflow.md", "rules/issue-intake.md", "rules/subagents.md"]:
         assert "Escalation conditions" in read(path), path
 
 
 def test_rules_have_no_old_stop_phrases():
     assert_no_old_stop_phrases(RULE_FILES)
+
+
+def test_handoff_is_written_after_spec_review_and_freeze():
+    for path in [ORCHESTRATION, "orchestration/integration/AGENTS-patch.md.example"]:
+        content = read(path)
+        approve = content.find("APPROVE")
+        handoff = [i for i in range(len(content)) if content.startswith("handoff.md", i)]
+        writes = [i for i in handoff if "generate" in content[max(0, i - 80):i]]
+        assert writes, path
+        assert all(approve != -1 and i > approve for i in writes), path
 
 
 def test_rules_require_spec_review_before_freeze():

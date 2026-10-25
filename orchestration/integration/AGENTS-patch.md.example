@@ -8,10 +8,9 @@ specific agent. Humans take part only in the initial question, escalation, and P
 ### If you are a design agent (brainstorm/spec/plan/tasks)
 
 1. Use superpowers brainstorming and writing-plans skills.
-2. At end of tasks phase, generate `specs/<feature>/handoff.md`.
-3. Get APPROVE from an independent spec-reviewer
-   (`vendor/ai-sdd-guide/integration/prompts/spec-reviewer-prompt.md`), then freeze with
-   `orchestration/tools/sdd-freeze.sh`.
+2. At end of tasks phase, get APPROVE from an independent spec-reviewer
+   (`vendor/ai-sdd-guide/integration/prompts/spec-reviewer-prompt.md`).
+3. Freeze with `orchestration/tools/sdd-freeze.sh`, then generate `specs/<feature>/handoff.md`.
 4. Commit, run `orchestration/tools/sdd-board.sh sync`, and hand implementation to a fresh agent
    context that receives only the frozen artifacts and `handoff.md`.
 

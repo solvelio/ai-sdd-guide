@@ -22,5 +22,6 @@ Implementation by external agents does not use these.
 ## Contract
 - Give each subagent the spec path + a self-contained brief; it has no conversation context.
 - Subagents must never freeze specs or disable checks.
+- Escalate to the human only under `## Escalation conditions` in `orchestration/rules/orchestration.md`.
 
 superpowers may provide additional design-phase subagent patterns; prefer them where they fit.
