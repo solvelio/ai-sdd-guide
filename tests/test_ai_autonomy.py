@@ -101,3 +101,34 @@ def test_rules_require_spec_review_before_freeze():
 
 def test_weakening_acs_still_needs_human_approval():
     assert "explicit human approval" in read("rules/issue-intake.md")
+
+
+# --- T2: spec-reviewer and PR body template ---
+
+SPEC_REVIEWER_FILES = [
+    "integration/agents/spec-reviewer.md",
+    "integration/prompts/spec-reviewer-prompt.md",
+]
+
+
+def test_spec_reviewer_files_define_verdicts_and_limit():
+    for path in SPEC_REVIEWER_FILES:
+        content = read(path)
+        for phrase in [
+            "APPROVE",
+            "CHANGES",
+            "ESCALATE",
+            "3 rounds",
+            "Spec review: APPROVE",
+            "issue-snapshot.json",
+            "traceability.json",
+        ]:
+            assert phrase in content, (path, phrase)
+        assert re.search(r"Do NOT[^\n]*edit", content), path
+
+
+def test_pr_body_template_has_ai_decision_log():
+    content = read("templates/pr-body.md")
+    for phrase in ["## AI の判断", "spec レビュー", "不明点", "指摘", "スコープ外"]:
+        assert phrase in content, phrase
+    assert "templates/pr-body.md" in read(ORCHESTRATION)

@@ -12,7 +12,7 @@
   - `test_rules_require_spec_review_before_freeze`: `rules/workflow.md`・`rules/issue-intake.md`・`rules/subagents.md`・`orchestration.md` が `spec-reviewer` を含み、`rules/workflow.md` と `orchestration.md` が `APPROVE` を含む
   - `test_weakening_acs_still_needs_human_approval`: `rules/issue-intake.md` が `explicit human approval` を含む
   - 既存の `tests/test_rules_freeze_verify.py` は全部通ったままにする。対応AC: SAC-1, SAC-2, SAC-3, SAC-6
-- [ ] T2: spec-reviewer と PR 本文の雛形を作る。`integration/agents/spec-reviewer.md`（frontmatter は `integration/agents/sdd-reviewer.md` と同じ形、name `spec-reviewer`、読み取りのみ）と `integration/prompts/spec-reviewer-prompt.md`（spec「spec レビュー」の照合の 5 項目、判定の表、3 rounds、記録の例 `Spec review: APPROVE (2 rounds)`、`ESCALATE` を返す条件として問い合わせの条件の参照）。`templates/pr-body.md`（`closes #N`、変更、verify、`## AI の判断` に 4 項目: spec レビューの判定と回数、仕様の不明点について AI が決めたことと理由、指摘の採否と理由、スコープ外にしたものとフォローアップの Issue）。テスト:
+- [x] T2: spec-reviewer と PR 本文の雛形を作る。`integration/agents/spec-reviewer.md`（frontmatter は `integration/agents/sdd-reviewer.md` と同じ形、name `spec-reviewer`、読み取りのみ）と `integration/prompts/spec-reviewer-prompt.md`（spec「spec レビュー」の照合の 5 項目、判定の表、3 rounds、記録の例 `Spec review: APPROVE (2 rounds)`、`ESCALATE` を返す条件として問い合わせの条件の参照）。`templates/pr-body.md`（`closes #N`、変更、verify、`## AI の判断` に 4 項目: spec レビューの判定と回数、仕様の不明点について AI が決めたことと理由、指摘の採否と理由、スコープ外にしたものとフォローアップの Issue）。テスト:
   - `test_spec_reviewer_files_define_verdicts_and_limit`: 2 ファイルが `APPROVE`・`CHANGES`・`ESCALATE`・`3 rounds`・`Spec review: APPROVE`・`issue-snapshot.json`・`traceability.json` を含み、ファイルの編集をしないこと（`Do NOT` と `edit`）を含む
   - `test_pr_body_template_has_ai_decision_log`: `templates/pr-body.md` が `## AI の判断`・`spec レビュー`・`不明点`・`指摘`・`スコープ外` を含み、`orchestration.md` が `templates/pr-body.md` を含む。対応AC: SAC-3, SAC-4, SAC-6
 - [ ] T3: 周りの文書を新しい流れに合わせる。`integration/hooks/skill-reminder.sh` と `integration/hooks/codex-skill-reminder.sh` の spec フェーズのメッセージ（human approval → spec-reviewer の `APPROVE`）、`integration/AGENTS.md.example`、`orchestration/integration/AGENTS-patch.md.example`、`orchestration/templates/handoff.md.example`（停止したら orchestrating agent に報告。人間を待つ文を消す）、`integration/agents/sdd-reviewer.md` と `integration/prompts/sdd-reviewer-prompt.md`（「The human will provide」→ 依頼した側が渡す）、`docs/00-overview.md`〜`docs/04-issue-tracker.md`（`01-workflow.md` のフェーズ、`02-roles.md` の人間の役割と subagent の表に spec-reviewer、`03-faq.md`、`04-issue-tracker.md` のフロー図）、`README.md`（「フェーズ割り当て・停止ルール」、オーケストレーションの説明文、Reviewer の表に spec-reviewer）。テスト:
@@ -26,8 +26,8 @@
 ## テスト（受入条件との対応・必須）
 - [x] SAC-1 → `tests/test_ai_autonomy.py::test_orchestration_defines_human_touchpoints_and_autonomous_flow`, `::test_rules_have_no_old_stop_phrases`
 - [x] SAC-2 → `tests/test_ai_autonomy.py::test_escalation_conditions_listed_and_referenced`, `::test_weakening_acs_still_needs_human_approval`
-- [ ] SAC-3 → `tests/test_ai_autonomy.py::test_spec_reviewer_files_define_verdicts_and_limit`, `::test_rules_require_spec_review_before_freeze`
-- [ ] SAC-4 → `tests/test_ai_autonomy.py::test_pr_body_template_has_ai_decision_log`
+- [x] SAC-3 → `tests/test_ai_autonomy.py::test_spec_reviewer_files_define_verdicts_and_limit`, `::test_rules_require_spec_review_before_freeze`
+- [x] SAC-4 → `tests/test_ai_autonomy.py::test_pr_body_template_has_ai_decision_log`
 - [ ] SAC-5 → `tests/test_ai_autonomy.py::test_surrounding_docs_have_no_old_stop_phrases`, `::test_spec_phase_reminder_mentions_spec_reviewer`, `::test_docs_describe_human_touchpoints`
 - [ ] SAC-6 → 上のテストすべてと、既存の `tests/test_rules_freeze_verify.py` が通る
 - [ ] SAC-7 → `tests/test_ai_autonomy.py::test_migration_has_v4_section`, `tests/test_update_sh.py::test_update_sh_distributes_spec_reviewer`
