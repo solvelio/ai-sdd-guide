@@ -114,8 +114,21 @@ cp vendor/ai-sdd-guide/integration/codex/config.toml.example .codex/config.toml
 # 5. CI を取り込む（テストコマンドはプロジェクトに合わせて差し替え）
 mkdir -p .github/workflows
 cp vendor/ai-sdd-guide/integration/ci/sdd-check.yml .github/workflows/
+cp vendor/ai-sdd-guide/integration/ci/sdd-board.yml .github/workflows/
 #    guide が private な場合は、このリポジトリと guide の両方を読める PAT をリポジトリ secret SDD_GUIDE_TOKEN に登録する（docs/migration.md 手順 5）
+
+# 6. （任意）ボードを使う: GitHub Projects のボードを作り、.sdd/board.json を作成する
+#    init は board.json がないと Project を新しく作る。ボードはアカウントで 1 枚なので、同じ owner の 2 つ目以降のリポジトリでは
+#    先に既存リポジトリの .sdd/board.json（owner・project・app_id）をコピーして置いてから init する（既存のボードを使い、開いている Issue を取り込む。docs/04-issue-tracker.md「リポジトリを足すとき」）
+bash vendor/ai-sdd-guide/orchestration/tools/sdd-board.sh init
+#    Actions の認証は次から選ぶ（手順は docs/04-issue-tracker.md）
+#    - Organization のリポジトリ: GitHub App。鍵を secret SDD_APP_PRIVATE_KEY に、App ID を board.json の app_id に書く
+#    - 個人アカウントの Project: classic PAT（repo（private リポジトリの場合）・project・read:org）を secret SDD_PROJECT_TOKEN に登録する
 ```
+
+`integration/update.sh` も `sdd-check.yml` と `sdd-board.yml` の両方をコピーする。
+`.sdd/board.json` がなければ、`sdd-board.sh sync` とワークフローのボードの処理は警告を出して飛ばされる。
+PR にブランチ名から Tier ラベル（`sdd:tier-*`）を自動で付けるのは `sdd-board.yml` で、これはボードの有無に関係なく動く。`sdd-board.yml` を入れない場合、PR の Tier ラベルは手で付ける。
 
 設計フェーズで superpowers を使う場合は、Claude Code のプラグインとして別途導入する（submoduleとは別）：
 ```
