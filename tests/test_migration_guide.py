@@ -102,3 +102,43 @@ def test_cli_examples_match_cli_options():
             if opt not in help_cache[name]:
                 problems.append(f"{name}.sh: {opt} not in {name}.py --help")
     assert not problems, problems
+
+
+SUBMODULE_PATH = re.compile(r"vendor/ai-sdd-guide/([^\s`'\"()]+)")
+
+
+def test_submodule_paths_exist_in_guide():
+    missing = []
+    for m in SUBMODULE_PATH.finditer(GUIDE.read_text()):
+        path = m.group(1)
+        if "<" in path:
+            continue
+        if path.endswith("..."):
+            path = path[:-3]
+        path = path.rstrip(".,:;、。）")
+        if path and not (ROOT / path).exists():
+            missing.append(m.group(0))
+    assert not missing, f"vendor/ai-sdd-guide/ paths not found in guide: {missing}"
+
+
+def _section_body(text, heading):
+    start = text.index("\n", text.index("\n" + heading) + 1)
+    end = text.find("\n## ", start)
+    return text[start:end if end != -1 else len(text)]
+
+
+def test_step4_and_checklist_follow_v3_state_derivation():
+    text = GUIDE.read_text()
+    step4 = _section_body(text, "## 手順 4:")
+    checklist = _section_body(text, "## Consumer Update チェックリスト")
+    for name, section in (("手順 4", step4), ("Consumer Update チェックリスト", checklist)):
+        assert "schema" not in section.lower(), f"{name} still mentions a schema"
+        assert "準拠" not in section, f"{name} still asks for schema compliance"
+        assert "```json" not in section, f"{name} still has a JSON example"
+    for s in ["t<Tier>/<Issue番号>-<名前>", "specs/", "sdd_state.py phase"]:
+        assert s in step4, f"手順 4 does not explain derivation: {s!r} missing"
+    state_lines = [l for l in checklist.splitlines() if "state.json" in l or "tasks.json" in l]
+    assert len(state_lines) == 1, f"expected one state.json/tasks.json item: {state_lines}"
+    line = state_lines[0]
+    for s in [".sdd/state.json", ".sdd/tasks.json", "削除", "t<Tier>/<Issue番号>-<名前>"]:
+        assert s in line, f"checklist item missing {s!r}: {line}"
