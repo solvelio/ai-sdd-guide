@@ -142,3 +142,40 @@ def test_step4_and_checklist_follow_v3_state_derivation():
     line = state_lines[0]
     for s in [".sdd/state.json", ".sdd/tasks.json", "削除", "t<Tier>/<Issue番号>-<名前>"]:
         assert s in line, f"checklist item missing {s!r}: {line}"
+
+
+def test_step4_heading_has_no_v2_terms():
+    heading = next(l for l in GUIDE.read_text().splitlines() if l.startswith("## 手順 4:"))
+    assert "手順 4:" in heading
+    for s in ["state.json", "tasks.json", "schema"]:
+        assert s not in heading, f"手順 4 heading still mentions {s!r}: {heading}"
+
+
+def test_step5_describes_actual_sdd_check_steps():
+    step5 = _section_body(GUIDE.read_text(), "## 手順 5:")
+    for s in ["state.json", "phase=done", "State reset gate", "Spec gate"]:
+        assert s not in step5, f"手順 5 still mentions {s!r}"
+    yml = (ROOT / "integration" / "ci" / "sdd-check.yml").read_text()
+    names = re.findall(r"^\s*- name:\s*(.+?)\s*$", yml, re.MULTILINE)
+    assert names, "no step names found in sdd-check.yml"
+    missing = [n for n in names if f"**{n}**" not in step5]
+    assert not missing, f"手順 5 does not mention sdd-check.yml steps: {missing}"
+
+
+def test_step7_and_examples_have_no_state_files():
+    text = GUIDE.read_text()
+    for heading in ("## 手順 7:", "## 具体例"):
+        body = _section_body(text, heading)
+        for s in ["state.json", "tasks.json"]:
+            assert s not in body, f"{heading} still mentions {s!r}"
+
+
+def test_partial_migration_checklist_lists_existing_schemas():
+    body = _section_body(GUIDE.read_text(), "## 部分移行禁止チェックリスト")
+    lines = [l for l in body.splitlines() if "`orchestration/schema/`" in l]
+    assert len(lines) == 1, f"expected one orchestration/schema/ item: {lines}"
+    m = re.search(r"—\s*(.+?)\s+schema\s*$", lines[0])
+    assert m, f"cannot parse schema names: {lines[0]}"
+    listed = {s.strip() for s in m.group(1).split("/")}
+    actual = {p.name[: -len(".schema.json")] for p in (ROOT / "orchestration" / "schema").glob("*.schema.json")}
+    assert listed == actual, f"listed {sorted(listed)} != existing {sorted(actual)}"

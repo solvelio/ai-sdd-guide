@@ -104,7 +104,7 @@ verify フェーズで `specs/<feature>/evidence.json` を作成する。
 
 ---
 
-## 手順 4: state.json / tasks.json の schema 準拠確認（#52）
+## 手順 4: 状態の割り出しの確認（#52）
 
 > v3 で置き換え済み（下の「v3」を参照）。
 
@@ -129,11 +129,11 @@ v2 から移行する場合は、「v3」の手順で `.sdd/state.json` と `.sd
   run: pytest tests/ -v  # または npm test / go test ./... 等
 ```
 
-既存 CI workflow がある場合は `sdd-check.yml` の各ステップを既存 workflow に追加する。sdd-check.yml は以下の 3 段階を実行する:
+既存 CI workflow がある場合は `sdd-check.yml` の各ステップを既存 workflow に追加する。sdd-check.yml は以下のステップを実行する:
 
-1. **State reset gate** — PR 作成前に `state.json` が `phase=done` になっていることを確認
-2. **Spec gate** — ソース変更がある PR に `specs/<feature>/spec.md` が存在することを確認
-3. **Run sdd-validate** — `sdd-validate.sh --root .` を実行してすべての validator チェックを通過させる
+1. **Install dependencies** — validator が使う `jsonschema` を入れる
+2. **Run sdd-validate** — `sdd-validate.sh --root . --pr --branch <PR のブランチ> --pr-labels <PR のラベル>` を実行する。ブランチ名の形、PR の Tier ラベルとブランチの Tier の一致、`freeze.json` と `handoff.md`（Tier 1/2）、Tier 2 の traceability / issue snapshot / evidence と `tasks.md` の完了状態を検査する
+3. **Tests** — このプロジェクトのテストを実行する（上で差し替えたコマンド）
 
 guide を private な fork や社内ミラーとして submodule にしている場合、デフォルトの `GITHUB_TOKEN` では submodule を取得できない。PAT をリポジトリ secret `SDD_GUIDE_TOKEN` に登録する。`sdd-check.yml` は secret があればそれを使い、なければ `GITHUB_TOKEN` を使うので、yml を編集する必要はない（`update.sh` で上書きされても設定は消えない）。
 
@@ -179,8 +179,8 @@ AGENTS.md への組み込み例は `vendor/ai-sdd-guide/orchestration/integratio
 
 1. 元 Issue の全 AC が `traceability.json` に追跡されている
 2. scope 外 AC に `followup_issue` URL がある
-3. `state.json` が対象 feature / tier / phase を指している
-4. `tasks.json` に対象 feature のエントリがあり schema valid である
+3. 名前の一致: ブランチ名 `t<Tier>/<Issue番号>-<名前>`、`specs/<Issue番号>-<名前>/` のディレクトリ名、`issue-snapshot.json` の Issue 番号が一致している
+4. freeze の有効性: `freeze.json` が有効である（`python3 vendor/ai-sdd-guide/integration/ci/sdd_state.py phase` がエラーにならない）
 5. `tasks.md` の完了状態と完了報告が一致する
 6. 各 AC が実行可能なテストに対応している
 
@@ -203,7 +203,8 @@ bash vendor/ai-sdd-guide/integration/ci/sdd-issue-snapshot.sh --issue 150 --feat
 
 # 4. sdd-validate で確認してから freeze
 bash vendor/ai-sdd-guide/integration/ci/sdd-validate.sh --root .
-# exit 0 を確認してから state.json を phase=implement に変更
+# exit 0 を確認し、spec の承認後に凍結する（freeze.json を作る）
+bash vendor/ai-sdd-guide/orchestration/tools/sdd-freeze.sh
 
 # 5. 実装後 verify フェーズで evidence.json を作成
 git rev-parse HEAD  # 40 桁 SHA を取得して evidence.json に記載
@@ -250,7 +251,7 @@ feature ごとに以下を確認する:
 
 以下のコンポーネントは同じ guide revision として一括更新する。いずれか 1 項目でも未対応の場合は移行を完了とみなさない:
 
-- [ ] `orchestration/schema/` — state / tasks / traceability / issue-snapshot / evidence schema
+- [ ] `orchestration/schema/` — traceability / issue-snapshot / evidence schema
 - [ ] `integration/ci/sdd-validate.sh` — single validator
 - [ ] `integration/ci/sdd-check.yml` — CI template
 - [ ] `integration/hooks/sdd-validate-hook.sh` — hook
