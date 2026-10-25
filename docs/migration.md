@@ -26,7 +26,7 @@
 
 新規 Tier 2 feature の freeze 前に `specs/<feature>/traceability.json` を作成する。
 
-スキーマ: `orchestration/schema/traceability.schema.json`
+スキーマ: `vendor/ai-sdd-guide/orchestration/schema/traceability.schema.json`
 
 ```json
 {
@@ -65,10 +65,10 @@ freeze 前に Issue 本文のスナップショットを `specs/<feature>/issue-
 **CLI を使用する場合:**
 
 ```bash
-bash integration/ci/sdd-issue-snapshot.sh --issue 99 --feature my-feature --root .
+bash vendor/ai-sdd-guide/integration/ci/sdd-issue-snapshot.sh --issue 99 --feature my-feature
 ```
 
-**手動作成の場合:** スキーマ `orchestration/schema/issue-snapshot.schema.json` に準拠した JSON を作成し、`body_hash` は `raw_body` の SHA-256 hex digest を設定する。
+**手動作成の場合:** スキーマ `vendor/ai-sdd-guide/orchestration/schema/issue-snapshot.schema.json` に準拠した JSON を作成し、`body_hash` は `raw_body` の SHA-256 hex digest を設定する。
 
 ```python
 import hashlib
@@ -83,7 +83,7 @@ body_hash = hashlib.sha256(raw_body.encode('utf-8')).hexdigest()
 
 verify フェーズで `specs/<feature>/evidence.json` を作成する。
 
-スキーマ: `orchestration/schema/evidence.schema.json`
+スキーマ: `vendor/ai-sdd-guide/orchestration/schema/evidence.schema.json`
 
 ```json
 {
@@ -108,7 +108,7 @@ verify フェーズで `specs/<feature>/evidence.json` を作成する。
 
 > v3 で置き換え済み（`state.json` / `tasks.json` はもう使わない。下の「v3」を参照）。
 
-スキーマ: `orchestration/schema/state.schema.json` / `orchestration/schema/tasks.schema.json`
+スキーマ: `vendor/ai-sdd-guide/orchestration/schema/state.schema.json` / `vendor/ai-sdd-guide/orchestration/schema/tasks.schema.json`
 
 `.sdd/state.json` の形式:
 
@@ -140,7 +140,7 @@ bash vendor/ai-sdd-guide/integration/ci/sdd-validate.sh --root .
 
 > v3 で置き換え済み（`update.sh` が `sdd-check.yml` を配る。下の「v3」を参照）。
 
-`.github/workflows/` に `integration/ci/sdd-check.yml` をコピーし、`Tests` ステップのコマンドをこのプロジェクトのテストコマンドに差し替える。
+`.github/workflows/` に `vendor/ai-sdd-guide/integration/ci/sdd-check.yml` をコピーし、`Tests` ステップのコマンドをこのプロジェクトのテストコマンドに差し替える。
 
 ```yaml
 - name: Tests
@@ -166,7 +166,7 @@ guide を private な fork や社内ミラーとして submodule にしている
 
 > v3 で置き換え済み。hook をコピーしてはいけない。`vendor/ai-sdd-guide/integration/hooks/...` を直接参照し、コピー済みの hook は削除する（下の「v3」を参照）。
 
-`integration/hooks/sdd-validate-hook.sh` をコピーして hook に登録する。
+`vendor/ai-sdd-guide/integration/hooks/sdd-validate-hook.sh` をコピーして hook に登録する。
 
 **Claude Code の場合** (`.claude/settings.json`):
 
@@ -183,7 +183,7 @@ guide を private な fork や社内ミラーとして submodule にしている
 }
 ```
 
-既存 hook がある場合は `integration/hooks/README.md` を参照して統合する。hook の詳細設定は `orchestration/integration/settings-patch.json` も参照。
+既存 hook がある場合は `vendor/ai-sdd-guide/integration/hooks/README.md` を参照して統合する。hook の詳細設定は `vendor/ai-sdd-guide/orchestration/integration/settings-patch.json` も参照。
 
 ---
 
@@ -191,9 +191,9 @@ guide を private な fork や社内ミラーとして submodule にしている
 
 > v3 で置き換え済み（reviewer は `freeze.json` と branch 名から状態を読む。下の「v3」を参照）。
 
-`integration/prompts/sdd-reviewer-prompt.md` を consumer repository の reviewer 設定に反映する。
+`vendor/ai-sdd-guide/integration/prompts/sdd-reviewer-prompt.md` を consumer repository の reviewer 設定に反映する。
 
-AGENTS.md への組み込み例は `orchestration/integration/AGENTS-patch.md.example` を参照。reviewer は spec 適合に加えて以下を確認するよう更新されている:
+AGENTS.md への組み込み例は `vendor/ai-sdd-guide/orchestration/integration/AGENTS-patch.md.example` を参照。reviewer は spec 適合に加えて以下を確認するよう更新されている:
 
 1. 元 Issue の全 AC が `traceability.json` に追跡されている
 2. scope 外 AC に `followup_issue` URL がある
@@ -212,7 +212,7 @@ issue #150 から feature `auth-refresh` を新規に開始する場合:
 
 ```bash
 # 1. Issue snapshot を取得
-bash integration/ci/sdd-issue-snapshot.sh --issue 150 --feature auth-refresh --root .
+bash vendor/ai-sdd-guide/integration/ci/sdd-issue-snapshot.sh --issue 150 --feature auth-refresh
 
 # 2. spec.md / plan.md / tasks.md を作成（通常の SDD Tier 2 フロー）
 
@@ -233,7 +233,7 @@ git rev-parse HEAD  # 40 桁 SHA を取得して evidence.json に記載
 
 ```bash
 # 1. Issue snapshot を取得（freeze 前でも実施可能）
-bash integration/ci/sdd-issue-snapshot.sh --issue 99 --feature my-feature --root .
+bash vendor/ai-sdd-guide/integration/ci/sdd-issue-snapshot.sh --issue 99 --feature my-feature
 
 # 2. traceability.json を作成
 #    既存 spec.md の SAC と Issue AC を対応させる
@@ -259,9 +259,9 @@ feature ごとに以下を確認する:
 - [ ] verify フェーズで `specs/<feature>/evidence.json` を作成した
 - [ ] `.sdd/state.json` が新 schema に準拠している
 - [ ] `.sdd/tasks.json` が新 schema に準拠している
-- [ ] CI workflow に `integration/ci/sdd-check.yml` の手順を組み込んだ
-- [ ] hook に `integration/hooks/sdd-validate-hook.sh` を組み込んだ
-- [ ] `integration/prompts/sdd-reviewer-prompt.md` を reviewer 設定に反映した
+- [ ] CI workflow に `vendor/ai-sdd-guide/integration/ci/sdd-check.yml` の手順を組み込んだ
+- [ ] hook に `vendor/ai-sdd-guide/integration/hooks/sdd-validate-hook.sh` を組み込んだ
+- [ ] `vendor/ai-sdd-guide/integration/prompts/sdd-reviewer-prompt.md` を reviewer 設定に反映した
 
 ---
 

@@ -1,4 +1,7 @@
 """Migration guide presence and content tests."""
+import re
+import subprocess
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).parents[1]
@@ -51,3 +54,51 @@ def test_migration_guide_projects_board_section():
     for s in ["state.json", "tasks.json", ".sdd/board.json", "SDD_PROJECT_TOKEN",
               "sdd-board.yml", "sdd-board.sh init", "git branch -m", "repo:"]:
         assert s in text, s
+
+
+SNAPSHOT_PREFIX = "bash vendor/ai-sdd-guide/integration/ci/sdd-issue-snapshot.sh"
+CI_EXAMPLE = re.compile(r"^bash vendor/ai-sdd-guide/integration/ci/([\w.-]+)\.sh\b(.*)$")
+GUIDE_PATH = re.compile(r"(?<![\w./-])(?:integration|orchestration)/[\w./-]*")
+
+
+def test_snapshot_examples_use_submodule_path_without_root():
+    lines = [l.strip() for l in GUIDE.read_text().splitlines() if "sdd-issue-snapshot.sh" in l]
+    assert lines, "no sdd-issue-snapshot.sh examples in docs/migration.md"
+    bad = [l for l in lines if not l.startswith(SNAPSHOT_PREFIX) or "--root" in l]
+    assert not bad, f"snapshot examples must start with {SNAPSHOT_PREFIX!r} and not use --root: {bad}"
+
+
+def test_consumer_sections_use_submodule_paths():
+    text = GUIDE.read_text()
+    start = text.index("\n## 手順 1")
+    end = text.index("\n## 部分移行禁止チェックリスト")
+    section = text[start:end]
+    bad = [m.group(0) for m in GUIDE_PATH.finditer(section)]
+    assert not bad, f"guide paths without vendor/ai-sdd-guide/ prefix: {bad}"
+
+
+def test_cli_examples_match_cli_options():
+    examples = []
+    for line in GUIDE.read_text().splitlines():
+        m = CI_EXAMPLE.match(line.strip())
+        if m:
+            examples.append((m.group(1), m.group(2)))
+    assert examples, "no bash vendor/ai-sdd-guide/integration/ci/*.sh examples found"
+    help_cache = {}
+    problems = []
+    for name, args in examples:
+        sh = ROOT / "integration" / "ci" / f"{name}.sh"
+        if not sh.exists():
+            problems.append(f"{sh.relative_to(ROOT)} does not exist")
+            continue
+        if name not in help_cache:
+            result = subprocess.run(
+                [sys.executable, str(ROOT / "integration" / "ci" / f"{name}.py"), "--help"],
+                capture_output=True, text=True, cwd=ROOT,
+            )
+            assert result.returncode == 0, f"{name}.py --help failed: {result.stderr}"
+            help_cache[name] = set(re.findall(r"--[\w-]+", result.stdout))
+        for opt in re.findall(r"(?<!\S)--[\w-]+", args):
+            if opt not in help_cache[name]:
+                problems.append(f"{name}.sh: {opt} not in {name}.py --help")
+    assert not problems, problems
