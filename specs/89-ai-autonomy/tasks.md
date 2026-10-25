@@ -5,7 +5,7 @@
 > 各タスクは、テストを先に書いて失敗を確かめ、文書を直して通す（RED → GREEN）。タスクごとにコミットする。
 
 ## 実装タスク（順序付き）
-- [ ] T1: rules の流れを書き換える。`orchestration/rules/orchestration.md`（`## Phase stopping rule` を削除し、`## Human touchpoints`・`## Autonomous flow`・`## Spec review`・`## Escalation conditions`・`## PR decision log`・`## Running spec-reviewer` を足す。設計・実装エージェントの節を plan.md のとおり直す）、`rules/core.md`、`rules/workflow.md`、`rules/issue-intake.md`、`rules/subagents.md`。テストは `tests/test_ai_autonomy.py` に `OLD_STOP_PHRASES`（plan.md）と次を書く:
+- [x] T1: rules の流れを書き換える。`orchestration/rules/orchestration.md`（`## Phase stopping rule` を削除し、`## Human touchpoints`・`## Autonomous flow`・`## Spec review`・`## Escalation conditions`・`## PR decision log`・`## Running spec-reviewer` を足す。設計・実装エージェントの節を plan.md のとおり直す）、`rules/core.md`、`rules/workflow.md`、`rules/issue-intake.md`、`rules/subagents.md`。テストは `tests/test_ai_autonomy.py` に `OLD_STOP_PHRASES`（plan.md）と次を書く:
   - `test_orchestration_defines_human_touchpoints_and_autonomous_flow`: `orchestration.md` に 5 つの見出しがあり、`never merge`（大文字小文字を区別しない）を含み、`Initial question`・`sdd:tier-N`・`sdd-board.sh sync` を含む
   - `test_escalation_conditions_listed_and_referenced`: `## Escalation conditions` の節に `1.`〜`6.` の番号付きの項目があり、`comment the reason on the Issue` を含む。`rules/core.md`・`rules/workflow.md`・`rules/issue-intake.md` が `Escalation conditions` を含む
   - `test_rules_have_no_old_stop_phrases`: 上の 5 ファイルに `OLD_STOP_PHRASES` がない
@@ -24,8 +24,8 @@
   - `test_update_sh_distributes_spec_reviewer`: `tests/test_update_sh.py` の既存の動かし方で `update.sh` を実行し、consumer の `.claude/agents/spec-reviewer.md` ができる（`tests/test_update_sh.py` に足す）。対応AC: SAC-7, SAC-6
 
 ## テスト（受入条件との対応・必須）
-- [ ] SAC-1 → `tests/test_ai_autonomy.py::test_orchestration_defines_human_touchpoints_and_autonomous_flow`, `::test_rules_have_no_old_stop_phrases`
-- [ ] SAC-2 → `tests/test_ai_autonomy.py::test_escalation_conditions_listed_and_referenced`, `::test_weakening_acs_still_needs_human_approval`
+- [x] SAC-1 → `tests/test_ai_autonomy.py::test_orchestration_defines_human_touchpoints_and_autonomous_flow`, `::test_rules_have_no_old_stop_phrases`
+- [x] SAC-2 → `tests/test_ai_autonomy.py::test_escalation_conditions_listed_and_referenced`, `::test_weakening_acs_still_needs_human_approval`
 - [ ] SAC-3 → `tests/test_ai_autonomy.py::test_spec_reviewer_files_define_verdicts_and_limit`, `::test_rules_require_spec_review_before_freeze`
 - [ ] SAC-4 → `tests/test_ai_autonomy.py::test_pr_body_template_has_ai_decision_log`
 - [ ] SAC-5 → `tests/test_ai_autonomy.py::test_surrounding_docs_have_no_old_stop_phrases`, `::test_spec_phase_reminder_mentions_spec_reviewer`, `::test_docs_describe_human_touchpoints`
