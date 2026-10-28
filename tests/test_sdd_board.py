@@ -46,6 +46,7 @@ def base_responses(items=None, issues=None):
         "project item-edit": {"stdout": "{}"},
         "project item-archive": {"stdout": "{}"},
         "project item-add 5 --owner acme": J({"id": "NEW"}),
+        "project link": {"stdout": ""},
     }
     for n in (issues or [7, 8, 9]):
         r["issue view %d --repo %s --json url" % (n, REPO)] = J({"url": URL % n})
