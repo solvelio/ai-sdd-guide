@@ -7,10 +7,12 @@ and Azure DevOps — only the label, dependency-link, and PR-link mechanisms dif
 
 SDD status is derived from the branch name `t<Tier>/<Issue番号>-<名前>` and the files under
 `specs/<feature>/` (`python3 vendor/ai-sdd-guide/integration/ci/sdd_state.py phase`). The board
-only displays it: GitHub Projects (one board per account, one card per Issue, single-select
+only displays it: GitHub Projects (one board per repository, one card per Issue, single-select
 field `Phase`: backlog → brainstorm → spec → plan → tasks → implement → verify → done),
 configured in `.sdd/board.json` and updated with `vendor/ai-sdd-guide/orchestration/tools/sdd-board.sh` and
-`integration/ci/sdd-board.yml`. GitLab and Azure DevOps boards are tracked in #71 and #72;
+`integration/ci/sdd-board.yml`. Run `sdd-board.sh init` once in each repository: it creates the
+Project (default title: the repository name), links it to the repository, and imports open Issues
+(`init --new` replaces a shared board with a new one). GitLab and Azure DevOps boards are tracked in #71 and #72;
 Bitbucket is out of scope (its Issues are being sunset).
 
 ## Always

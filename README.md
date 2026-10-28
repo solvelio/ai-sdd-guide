@@ -52,10 +52,11 @@ superpowers がインストールされたエージェントであれば誰で�
 
 状態ファイルは持たない。Tier・feature・フェーズは、ブランチ名 `t<Tier>/<Issue番号>-<名前>` と
 `specs/<Issue番号>-<名前>/` のファイルから割り出す（`python3 vendor/ai-sdd-guide/integration/ci/sdd_state.py phase`）。
-ボードは GitHub Projects（アカウントで 1 枚）で、割り出したフェーズを表示するだけ。
+ボードは GitHub Projects（リポジトリごとに 1 枚）で、割り出したフェーズを表示するだけ。
+各リポジトリで `sdd-board.sh init` を実行すれば、Project の作成・リポジトリへのリンク・開いている Issue の取り込みが済む。
 
 ```bash
-# ボードを作り、開いている Issue を backlog で取り込む（初回のみ）
+# ボードを作ってリポジトリにリンクし、開いている Issue を backlog で取り込む（初回のみ）
 bash vendor/ai-sdd-guide/orchestration/tools/sdd-board.sh init
 # 今のブランチの Issue のカードのフェーズを更新
 bash vendor/ai-sdd-guide/orchestration/tools/sdd-board.sh sync
@@ -121,8 +122,8 @@ cp vendor/ai-sdd-guide/integration/ci/sdd-board.yml .github/workflows/
 #    guide が private な場合は、このリポジトリと guide の両方を読める PAT をリポジトリ secret SDD_GUIDE_TOKEN に登録する（docs/migration.md 手順 5）
 
 # 6. （任意）ボードを使う: GitHub Projects のボードを作り、.sdd/board.json を作成する
-#    init は board.json がないと Project を新しく作る。ボードはアカウントで 1 枚なので、同じ owner の 2 つ目以降のリポジトリでは
-#    先に既存リポジトリの .sdd/board.json（owner・project・app_id）をコピーして置いてから init する（既存のボードを使い、開いている Issue を取り込む。docs/04-issue-tracker.md「リポジトリを足すとき」）
+#    ボードはリポジトリごとに 1 枚。各リポジトリで init を実行すると、Project を作り（名前の既定はリポジトリ名、--title で変更）、
+#    リポジトリにリンクし、開いている Issue を取り込む。共有のボードから自分用に切り替えるときは init --new（docs/migration.md「v4.1」）
 bash vendor/ai-sdd-guide/orchestration/tools/sdd-board.sh init
 #    Actions の認証は次から選ぶ（手順は docs/04-issue-tracker.md）
 #    - Organization のリポジトリ: GitHub App。鍵を secret SDD_APP_PRIVATE_KEY に、App ID を board.json の app_id に書く
