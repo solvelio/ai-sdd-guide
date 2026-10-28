@@ -600,3 +600,97 @@ def test_no_scope_hint_on_other_failure(env):
     assert r.returncode == 0
     assert "warning" in r.stderr
     assert HINT not in r.stderr
+
+
+def init_table(number=5, owner="acme"):
+    t = base_responses()
+    t["project field-list %d --owner %s" % (number, owner)] = \
+        t["project field-list 5 --owner acme"]
+    t["project item-list %d --owner %s" % (number, owner)] = J({"items": []})
+    t["project view %d --owner %s" % (number, owner)] = J({"id": "PID"})
+    t["project item-add %d --owner %s" % (number, owner)] = J({"id": "NEW"})
+    t["project link"] = {"stdout": "{}"}
+    t["issue list"] = J([{"number": 7, "url": URL % 7}])
+    return t
+
+
+def link_args(env):
+    links = env.sub("project", "link")
+    assert len(links) == 1, env.calls()
+    return links[0]
+
+
+def test_init_links_new_project_to_repo(env):
+    table = init_table()
+    table["project create"] = J({"number": 5})
+    env.respond(table)
+    r = env.run("init")
+    assert r.returncode == 0, r.stderr
+    assert link_args(env) == ["project", "link", "5", "--owner", "acme", "--repo", REPO]
+
+
+def test_init_links_existing_project_to_repo(env):
+    env.board()
+    env.respond(init_table())
+    r = env.run("init")
+    assert r.returncode == 0, r.stderr
+    assert env.sub("project", "create") == []
+    assert link_args(env) == ["project", "link", "5", "--owner", "acme", "--repo", REPO]
+
+
+def test_init_default_title_is_repo_name(env):
+    table = init_table()
+    table["project create"] = J({"number": 5})
+    env.respond(table)
+    r = env.run("init")
+    assert r.returncode == 0, r.stderr
+    create = env.sub("project", "create")[0]
+    assert create[create.index("--title") + 1] == "widgets"
+    r = env.run("init", "--title", "Custom", "--new")
+    assert r.returncode == 0, r.stderr
+    create = env.sub("project", "create")[1]
+    assert create[create.index("--title") + 1] == "Custom"
+
+
+def test_init_link_failure_warns_and_continues(env):
+    env.board()
+    table = init_table()
+    table["project link"] = {"stdout": "", "code": 1}
+    env.respond(table)
+    r = env.run("init")
+    assert r.returncode == 0, r.stderr
+    assert "sdd-board: warning:" in r.stderr
+    assert len(env.sub("project", "link")) == 1
+    assert len(env.sub("issue", "list")) == 1
+    assert len(env.sub("project", "item-add")) == 1
+
+
+def test_init_repo_view_failure_exits_1(env):
+    env.board()
+    table = init_table()
+    table["repo view"] = {"stdout": "", "code": 1}
+    env.respond(table)
+    r = env.run("init")
+    assert r.returncode == 1
+    assert "sdd-board: error:" in r.stderr
+    assert "Traceback" not in r.stderr
+    assert env.sub("project") == []  # fails before touching the Project
+    data = json.loads((env.root / ".sdd" / "board.json").read_text())
+    assert data == {"owner": "acme", "project": 5}
+
+
+def test_init_new_replaces_project_and_keeps_keys(env):
+    write_board(env, {"owner": "old", "project": 1, "app_id": 5,
+                      "tier0_branch_prefixes": ["bot/"]})
+    table = init_table(number=9)
+    table["project create"] = J({"number": 9})
+    env.respond(table)
+    r = env.run("init", "--new")
+    assert r.returncode == 0, r.stderr
+    create = env.sub("project", "create")
+    assert len(create) == 1
+    assert create[0][create[0].index("--owner") + 1] == "acme"
+    data = json.loads((env.root / ".sdd" / "board.json").read_text())
+    assert data == {"owner": "acme", "project": 9, "app_id": 5,
+                    "tier0_branch_prefixes": ["bot/"]}
+    assert link_args(env) == ["project", "link", "9", "--owner", "acme", "--repo", REPO]

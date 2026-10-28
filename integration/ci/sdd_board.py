@@ -202,29 +202,43 @@ def cmd_pr(board: Board, root: Path, args) -> None:
     board.set_phase(info.issue, "done" if merged else derive_phase(root, info))
 
 
+def repo_info() -> Dict[str, str]:
+    """nameWithOwner / owner of the current repository (GhError if unavailable)."""
+    info = gh_json(["repo", "view", "--json", "nameWithOwner,owner"])
+    name = info.get("nameWithOwner") if isinstance(info, dict) else None
+    owner = (info.get("owner") or {}).get("login") if isinstance(info, dict) else None
+    if not isinstance(name, str) or "/" not in name or not isinstance(owner, str) or not owner:
+        raise GhError("gh repo view の出力を読めません")
+    return {"nameWithOwner": name, "name": name.split("/", 1)[1], "owner": owner}
+
+
 def cmd_init(root: Path, args) -> int:
     global _CWD
     _CWD = root
     path = root / BOARD_FILE
     try:
-        if path.is_file():
-            data = load_board(root)
-            owner, project = data["owner"], data["project"]
-        else:
-            owner = args.owner
-            if not owner:
-                owner = gh_json(["repo", "view", "--json", "nameWithOwner,owner"]) \
-                    .get("owner", {}).get("login")
-            if not owner:
-                raise GhError("owner を特定できません。--owner を指定してください")
-            created = gh_json(["project", "create", "--owner", owner, "--title", args.title,
+        existing = load_board(root) if path.is_file() else None
+        repo = repo_info()
+        if existing is None or args.new:
+            owner = args.owner or repo["owner"]
+            title = args.title or repo["name"]
+            created = gh_json(["project", "create", "--owner", owner, "--title", title,
                                "--format", "json"])
             project = created.get("number")
             if not isinstance(project, int):
                 raise GhError("Project の番号を取得できません")
+            data = dict(existing or {})
+            data.update({"owner": owner, "project": project})
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(json.dumps({"owner": owner, "project": project}, indent=2) + "\n",
-                            encoding="utf-8")
+            path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+        else:
+            owner, project = existing["owner"], existing["project"]
+        try:
+            run_gh(["project", "link", str(project), "--owner", owner,
+                    "--repo", repo["nameWithOwner"]])
+        except GhError as e:
+            print("sdd-board: warning: Project をリポジトリにリンクできません (%s)" % e,
+                  file=sys.stderr)
         fields = gh_json(["project", "field-list", str(project), "--owner", owner,
                           "--format", "json"]).get("fields", [])
         if not any(f.get("name") == "Phase" for f in fields):
@@ -296,7 +310,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         return p
 
     add("sync")
-    p = add("init", ("--title", {"default": "SDD Board"}), ("--owner", {}))
+    p = add("init", ("--title", {}), ("--owner", {}),
+            ("--new", {"action": "store_true"}))
     add("import")
     add("set", ("--issue", {"type": int, "required": True}),
         ("--phase", {"required": True}))
