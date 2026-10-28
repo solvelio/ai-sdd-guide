@@ -8,8 +8,10 @@ Issue 登録から SDD ワークフロー完了までを、GitHub / GitLab / Bit
 SDD のステータスは、ブランチ名 `t<Tier>/<Issue番号>-<名前>` と `specs/<Issue番号>-<名前>/` のファイルから
 割り出す（記録するファイルはない）。ボードは割り出した結果を**表示するだけ**。
 
-- ボード: GitHub Projects（アカウントで 1 枚、1 Issue = 1 カード）。列は単一選択フィールド `Phase`:
+- ボード: GitHub Projects（リポジトリごとに 1 枚、1 Issue = 1 カード）。列は単一選択フィールド `Phase`:
   backlog → brainstorm → spec → plan → tasks → implement → verify → done。
+- 作成: 各リポジトリで `orchestration/tools/sdd-board.sh init` を実行すれば、Project の作成（名前の既定はリポジトリ名、`--title` で変更）・リポジトリへのリンク・開いている Issue の取り込みが済む。
+  `.sdd/board.json` はこのとき作られる。すでにあればその Project を使う（`--new` を付けると新しい Project を作り、`owner`・`project` だけを書き換える）。
 - 設定: `.sdd/board.json`（`owner`・`project`・`app_id`・`tier0_branch_prefixes`）。Actions の secret は
   `SDD_APP_PRIVATE_KEY`（GitHub App の鍵）。予備として `SDD_PROJECT_TOKEN`（classic PAT、`repo`（private リポジトリの場合）・`project`・`read:org`）も使える。
   App があれば App、なければ PAT、どちらもなければ警告して更新を飛ばす。App を設定したのにトークンが作れないときはジョブが失敗する。
@@ -37,7 +39,7 @@ SDD のステータスは、ブランチ名 `t<Tier>/<Issue番号>-<名前>` と
 
 ### 各リポジトリに設定する
 
-1. `.sdd/board.json` に `app_id`（App ID の整数）を書き、PR で入れる。`owner`・`project` も要る。
+1. `sdd-board.sh init` が作った `.sdd/board.json` に `app_id`（App ID の整数）を書き足し、PR で入れる。
 2. 鍵をリポジトリの secret `SDD_APP_PRIVATE_KEY` に配る。GitHub Free では private リポジトリが Organization の secret を読めないため、リポジトリごとの secret に入れる。Mac で `op` を 1Password アプリと連携させ、自分の `gh` でログインした状態で実行する。
 
 ```bash
@@ -53,7 +55,9 @@ bash vendor/ai-sdd-guide/orchestration/tools/sdd-app-secret.sh \
 
 ### リポジトリを足すとき
 
-1. `.sdd/board.json`（`owner`・`project`・`app_id`）を PR で置き、**マージする**（スクリプトは既定ブランチから `app_id` を読む。マージ前に実行するなら `--app-id` を渡す）。
+新しいリポジトリに GitHub App の鍵を配る手順。
+
+1. そのリポジトリで `sdd-board.sh init` を実行し（`.sdd/board.json` ができる）、`app_id` を書き足して PR で入れ、**マージする**（スクリプトは既定ブランチから `app_id` を読む。マージ前に実行するなら `--app-id` を渡す）。
 2. そのリポジトリに対して `sdd-app-secret.sh` を 1 回実行する。
 
 ### 予備の PAT

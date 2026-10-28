@@ -274,7 +274,7 @@ consumer repo では次の順に行う。
 5. **`.sdd/state.json` と `.sdd/tasks.json` を消す。** もう読まれない。あわせて、kanban を使っていた場合は `.github/workflows/kanban-pages.yml` を消し、GitHub Pages を無効にする。
 6. **`SDD_PROJECT_TOKEN` を登録する。** classic PAT（`repo`（private リポジトリの場合）・`project`・`read:org`）を作り、repo secret `SDD_PROJECT_TOKEN` に登録する（`sdd-board.yml` が使う）。v3.1 以降は GitHub App を使うのが望ましい（下の「v3.1」）。
 7. **`sdd-board.sh init` を実行する。** `bash vendor/ai-sdd-guide/orchestration/tools/sdd-board.sh init [--owner OWNER] [--title TITLE]`。Project と Phase フィールドを作り、`.sdd/board.json`（`owner`・`project`・任意で `tier0_branch_prefixes`）を書き、open な Issue をボードに取り込む。`.sdd/board.json` はコミットする。
-   - ボードは 1 アカウントに 1 つ。アカウントにすでに SDD のボードがあるときは、`init` の前にその `owner` / `project` を `.sdd/board.json` に書いておく（`{"owner": "...", "project": 3}`）。そうすれば `init` は新しい Project を作らず、Phase フィールドの確認と Issue の取り込みだけを行う。書かずに実行すると 2 つ目の Project ができる。
+   - ボードはリポジトリごとに 1 枚（v4.1 以降）。以前の、同じ owner の複数のリポジトリで 1 枚のボードを共有する構成から切り替える手順は、下の「v4.1」を参照する。
    - ローカルの `gh` には `project` と `read:org` のスコープが要る: `gh auth refresh -s project,read:org`。
 8. **リポジトリごとのビューを作る。** Projects の画面でビューを足し、絞り込みに `repo:owner/name` を指定する。
 9. **以降、新しい作業にはすべて Issue が要る。** Tier 0 も例外ではない（`t0/<Issue番号>-<名前>`）。dependabot / renovate などの bot ブランチは `tier0_branch_prefixes` で除外される。
@@ -316,3 +316,18 @@ consumer repo では次を行う。
 4. **PR 本文の雛形を使う。** `vendor/ai-sdd-guide/templates/pr-body.md` を PR テンプレートに写すか、PR を作るエージェントに参照させる。
 
 CI・validator・guard・`freeze.json` の形は変わらない。進行中の feature はそのまま続けてよい。
+
+---
+
+## v4.1: リポジトリごとのボード（#91）
+
+ボードを「同じ owner のリポジトリで 1 枚を共有する」から「リポジトリごとに 1 枚」に変える。`sdd-board.sh init` は Project をそのリポジトリにリンクし、新しく作る Project の名前の既定はリポジトリ名になる。新しいオプション `init --new` は、`.sdd/board.json` があっても新しい Project を作り、`owner`・`project` だけを書き換える（`app_id`・`tier0_branch_prefixes` などは残る）。
+
+共有のボードを使っている consumer repo では、次の順に切り替える。
+
+1. **submodule を上げる。** `git submodule update --remote vendor/ai-sdd-guide`（または目的の revision を checkout）して、親 repo でコミットする。
+2. **自分用の Project を作る。** `bash vendor/ai-sdd-guide/orchestration/tools/sdd-board.sh init --new` を実行し、`.sdd/board.json` の変更を PR で入れる。`app_id` は残る。新しい Project はリポジトリにリンクされ、開いている Issue が取り込まれる。
+3. **古い共有のボードから、そのリポジトリのカードをアーカイブする。** Projects の画面で `repo:owner/name` で絞り込み、まとめてアーカイブする。
+4. **GitHub App の鍵の配り直しは要らない。** App は Organization の Projects 全体に権限があるので、新しい Project もそのまま更新できる。
+
+新しく導入するリポジトリは、`sdd-board.sh init` を実行するだけでよい。
