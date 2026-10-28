@@ -23,9 +23,29 @@ def test_board_json_present():
     assert isinstance(data["project"], int) and not isinstance(data["project"], bool)
 
 
-def test_board_json_has_app_id():
+def test_board_json_is_personal_without_app_id():
     data = json.loads((ROOT / ".sdd" / "board.json").read_text(encoding="utf-8"))
-    assert isinstance(data["app_id"], int) and not isinstance(data["app_id"], bool)
+    assert data["owner"] == "toshikimiyagawa"
+    assert isinstance(data["project"], int) and not isinstance(data["project"], bool)
+    assert "app_id" not in data
+
+
+def test_no_solvelio_urls():
+    needle = "github.com/" + "solvelio/"
+    files = subprocess.run(
+        ["git", "ls-files", "-z"], cwd=ROOT, capture_output=True, text=True, check=True
+    ).stdout.split("\0")
+    hits = []
+    for rel in files:
+        if not rel or rel.split("/", 1)[0] in ("specs", "_dev", ".git"):
+            continue
+        path = ROOT / rel
+        if not path.is_file():
+            continue
+        text = path.read_bytes().decode("utf-8", errors="ignore")
+        if needle in text:
+            hits.append(rel)
+    assert hits == []
 
 
 def test_board_workflow_present():
