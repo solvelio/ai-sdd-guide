@@ -21,6 +21,9 @@ Tier 1（軽量 spec）。
 - `board.json` がなく `--new` もないとき（新しく作るとき）は、今と同じく Project を作って `board.json` を書く。
 - Project が決まったら（新しく作ったときも、`board.json` の Project を使うときも）、`gh project link <project> --owner <owner> --repo <nameWithOwner>` でリポジトリにリンクする。
   - リンクに失敗しても init は失敗させない。警告（`sdd-board: warning: ...`）を標準エラーに出して続ける（owner が違うなど、リンクできない構成でも Phase フィールドの確認と Issue の取り込みはできるようにする）。
+- `gh repo view --json nameWithOwner,owner` が失敗したとき:
+  - リポジトリ名や owner が Project を作るのに要る場合（新しく作るときに `--title` か `--owner` を渡していない）は、今と同じくエラー（終了コード 1）。
+  - それ以外（`board.json` の Project を使うとき、または `--title` と `--owner` を両方渡したとき）は、リンクだけを飛ばして警告を出し、続ける。
 - そのあとの Phase フィールドの確認と、開いている Issue の取り込みは今と同じ。
 
 ### 文書
@@ -37,8 +40,8 @@ Tier 1（軽量 spec）。
 
 ## 受入条件
 
-- [ ] SAC-1: README・`docs/04-issue-tracker.md`・`rules/issue-intake.md` に「アカウントで 1 枚」「one board per account」「board.json をコピー」の記述がなく、「リポジトリごと」（`rules/` は `one board per repository`）の記述がある（元 Issue: 91-AC1）
-- [ ] SAC-2: `init` が、新しく作るときも `board.json` の Project を使うときも、`gh project link <project> --owner <owner> --repo <nameWithOwner>` を呼ぶ。新しく作る Project の名前の既定はリポジトリ名。リンクが失敗しても終了コード 0 で、警告を出し、Issue の取り込みまで行う（元 Issue: 91-AC2）
+- [ ] SAC-1: README・`docs/04-issue-tracker.md`・`rules/issue-intake.md` に「アカウントで 1 枚」「one board per account」の記述がなく、`board.json` と「コピー」（または `copy`）を同じ行に含む行がない。README と `docs/04-issue-tracker.md` は「リポジトリごとに 1 枚」、`rules/issue-intake.md` は `one board per repository` を含む（元 Issue: 91-AC1）
+- [ ] SAC-2: `init` が、新しく作るときも `board.json` の Project を使うときも、`gh project link <project> --owner <owner> --repo <nameWithOwner>` を呼ぶ。新しく作る Project の名前の既定はリポジトリ名。リンクが失敗しても、`board.json` があるときに `gh repo view` が失敗しても、終了コード 0 で、警告を出し、Issue の取り込みまで行う（元 Issue: 91-AC2）
 - [ ] SAC-3: `init --new` は `board.json` があっても新しい Project を作り、`owner`・`project` を書き換え、`app_id`・`tier0_branch_prefixes` を残す（元 Issue: 91-AC3）
 - [ ] SAC-4: `docs/migration.md` に「v4.1」の節があり、`init --new`・カードのアーカイブ・App の鍵の配り直しが要らないことが書かれている。「v3」節に「1 アカウントに 1 つ」の記述がない（元 Issue: 91-AC4）
 - [ ] SAC-5: SAC-2・SAC-3 を `tests/test_sdd_board.py` のテストが検査する（元 Issue: 91-AC5）
@@ -62,6 +65,7 @@ Tier 1（軽量 spec）。
 - `tests/test_sdd_board.py::test_init_links_existing_project_to_repo` — SAC-2
 - `tests/test_sdd_board.py::test_init_default_title_is_repo_name` — SAC-2
 - `tests/test_sdd_board.py::test_init_link_failure_warns_and_continues` — SAC-2
+- `tests/test_sdd_board.py::test_init_repo_view_failure_with_board_json_skips_link` — SAC-2
 - `tests/test_sdd_board.py::test_init_new_replaces_project_and_keeps_keys` — SAC-3
 - `tests/test_board_docs.py::test_docs_describe_per_repo_board` — SAC-1
 - `tests/test_board_docs.py::test_migration_has_per_repo_section` — SAC-4
